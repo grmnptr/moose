@@ -209,8 +209,8 @@ This behavior is often referred to as [overfitting](https://en.wikipedia.org/wik
 which decreases the accuracy with the increasing model parameters.
 The histogram of the results is presented in [normal_hist]. It is important to mention
 that the results for the polynomial regression surrogate were obtained using `max_degree=4`.
-It is apparent that the two methods give similar solutions, however the the Histogram
-from the polynomial regression are longer.
+It is apparent that the two methods give similar solutions, however the tails of the histogram
+of the polynomial regression are longer.
 
 !media poly_reg_example_normal_hist.svg id=normal_hist
        caption=Histogram of the maximum temperature coming from the Monte Carlo run using the surrogate models and assuming normal parameter distributions.
