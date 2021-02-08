@@ -213,20 +213,20 @@ cd moose/modules/stocastic_tools/examples/surrogates/pod_rb/2d_multireg
 In the following subsection a short analysis is provided for the results obtained
 using the example input files. As already mentioned, the problem has 8 uncertain parameters and
 altogether 100 parameter samples are generated using [LatinHypercubeSampler.md]
-to obtain snapshots for the training. The first three snapshots are presented in
+to obtain snapshots for the training. Three examples of the snapshots are presented in
 [snap_1], [snap_2] and [snap_3]. It is visible that depending on the actual parameter combination,
 the profile of the solution can change considerably.
 
 !row!
 
 !media 2d_multiregion_sol0.png style=width:33%;float:left
-       id=snap_1 caption=Snapshot #1.
+       id=snap_1 caption=Snap. example #1.
 
 !media 2d_multiregion_sol1.png style=width:33%;float:left
-       id=snap_2 caption=Snapshot #2.
+       id=snap_2 caption=Snap. example #2.
 
 !media 2d_multiregion_sol2.png style=width:33%;float:left
-       id=snap_3 caption=Snapshot #3.
+       id=snap_3 caption=Snap. example #3.
 
 !row-end!
 
