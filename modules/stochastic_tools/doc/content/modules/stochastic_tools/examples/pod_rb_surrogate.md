@@ -232,9 +232,9 @@ the profile of the solution can change considerably.
 
 After all of the snapshots are obtained, the basis functions of the reduced subspaces are extracted.
 In this scenario, an energy retention limit of 0.999 999 999 is used in the trainer
-which will keep 53 basis functions for the reduced subspace. The decay of the
+which will keep 55 basis functions for the reduced subspace. The decay of the
 eigenvalues of the snapshot correlation matrix is shown in [ev_decay].
-The reduced operators are then computed using these 53 basis functions.
+The reduced operators are then computed using these 55 basis functions.
 
 !plot scatter id=ev_decay caption=Scree plot of the eigenvalues of the correlation matrix.
   filename=examples/surrogates/pod_rb/2d_multireg/gold/eigenvalues_psi.csv
