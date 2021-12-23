@@ -18,28 +18,15 @@
 class Sampler;
 class StochasticToolsTransfer;
 
-class SamplerFullSolveMultiApp : public FullSolveMultiApp, public SamplerInterface
+class SamplerFullSolveMultiApp : public FullSolveMultiApp,
+                                 public SamplerInterface,
+                                 public ReporterInterface
 {
 public:
   static InputParameters validParams();
   SamplerFullSolveMultiApp(const InputParameters & parameters);
   virtual bool solveStep(Real dt, Real target_time, bool auto_advance = true) override;
   virtual void preTransfer(Real dt, Real target_time) override;
-
-  /**
-   * Helper for inserting row data into commandline arguments
-   * Used here and in SamplerTransientMultiApp
-   *
-   * How it works:
-   * - Scalar parameters are done in order of row data:
-   *      param1;param2;param3 -> param1=row[0] param2=row[1] param3=row[2]
-   * - Vector parameters are assigned with brackets:
-   *      vec_param1[0,1];vec_param2[1,2] -> vec_param1='row[0] row[1]' vec_param2='row[1] row[2]'
-   * - Any parameter already with an equal sign is not modified:
-   *      param1=3.14;param2[0,1,2] -> param1=3.14 param2='row[0] row[1] row[2]'
-   */
-  static std::string sampledCommandLineArgs(const std::vector<Real> & row,
-                                            const std::vector<std::string> & full_args_name);
 
 protected:
   /// Sampler to utilize for creating MultiApps
@@ -82,4 +69,7 @@ private:
   std::vector<Real> _row_data;
   /// Current local index representing _row_data
   dof_id_type _local_row_index = std::numeric_limits<dof_id_type>::max();
+
+  /// Reporter value determining whether the sub-app should be run for a certain sample
+  const std::vector<bool> * _should_run = nullptr;
 };

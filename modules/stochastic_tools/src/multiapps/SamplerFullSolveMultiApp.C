@@ -19,6 +19,7 @@ SamplerFullSolveMultiApp::validParams()
 {
   InputParameters params = FullSolveMultiApp::validParams();
   params += SamplerInterface::validParams();
+  params += ReporterInterface::validParams();
   params.addClassDescription(
       "Creates a full-solve type sub-application for each row of each Sampler matrix.");
   params.addRequiredParam<SamplerName>("sampler",
@@ -37,12 +38,17 @@ SamplerFullSolveMultiApp::validParams()
       modes,
       "The operation mode, 'normal' creates one sub-application for each row in the Sampler and "
       "'batch' creates one sub-application for each processor and re-executes for each row.");
+  params.addParam<ReporterName>(
+      "should_run_reporter",
+      "Vector reporter value determining whether a certain multiapp should be run with this "
+      "multiapp. This only works in batch-reset or batch-restore mode.");
   return params;
 }
 
 SamplerFullSolveMultiApp::SamplerFullSolveMultiApp(const InputParameters & parameters)
   : FullSolveMultiApp(parameters),
     SamplerInterface(this),
+    ReporterInterface(this),
     _sampler(getSampler("sampler")),
     _mode(getParam<MooseEnum>("mode").getEnum<StochasticTools::MultiAppMode>()),
     _local_batch_app_index(0),
@@ -64,6 +70,10 @@ SamplerFullSolveMultiApp::SamplerFullSolveMultiApp(const InputParameters & param
        _sampler.getRankConfig(_mode == StochasticTools::MultiAppMode::BATCH_RESET ||
                               _mode == StochasticTools::MultiAppMode::BATCH_RESTORE));
   _number_of_sampler_rows = _sampler.getNumberOfRows();
+
+  if (isParamValid("should_run_reporter") && _mode == StochasticTools::MultiAppMode::NORMAL)
+    paramError("should_run_reporter",
+               "Conditionally run sampler multiapp only works in batch modes.");
 }
 
 void SamplerFullSolveMultiApp::preTransfer(Real /*dt*/, Real /*target_time*/)
@@ -82,6 +92,9 @@ void SamplerFullSolveMultiApp::preTransfer(Real /*dt*/, Real /*target_time*/)
   // Reinitialize app to original state prior to solve, if a solve has occured
   if (_solved_once)
     initialSetup();
+
+  if (isParamValid("should_run_reporter"))
+    _should_run = &getReporterValue<std::vector<bool>>("should_run_reporter");
 }
 
 bool
@@ -107,6 +120,17 @@ SamplerFullSolveMultiApp::solveStep(Real dt, Real target_time, bool auto_advance
 bool
 SamplerFullSolveMultiApp::solveStepBatch(Real dt, Real target_time, bool auto_advance)
 {
+  TIME_SECTION("solveStepBatch", 3, "Solving Step Batch For SamplerFullSolveMultiApp");
+
+  if (_should_run && _should_run->size() < _sampler.getNumberOfLocalRows())
+    paramError("should_run_reporter",
+               "Reporter deteriming multiapp run must be of size greater than or equal to the "
+               "number of local rows in the sampler, ",
+               _should_run->size(),
+               " < ",
+               _sampler.getNumberOfLocalRows(),
+               ".");
+
   // Value to return
   bool last_solve_converged = true;
 
@@ -138,6 +162,19 @@ SamplerFullSolveMultiApp::solveStepBatch(Real dt, Real target_time, bool auto_ad
        ++i)
   {
     updateRowData(_local_batch_app_index);
+
+    bool run = true;
+    if (_should_run)
+    {
+      if (isRootProcessor())
+        run = (*_should_run)[_local_batch_app_index];
+      _my_communicator.broadcast(run, 0);
+    }
+    if (!run)
+    {
+      _local_batch_app_index++;
+      continue;
+    }
 
     for (auto & transfer : to_transfers)
     {
@@ -206,12 +243,65 @@ SamplerFullSolveMultiApp::getCommandLineArgsParamHelper(unsigned int local_app)
     // sampler data and combine them to get full command line option strings.
     updateRowData(_mode == StochasticTools::MultiAppMode::NORMAL ? local_app
                                                                  : _local_batch_app_index);
-    const std::vector<std::string> & full_args_name =
+
+    std::ostringstream oss;
+    const std::vector<std::string> & cli_args_name =
         MooseUtils::split(FullSolveMultiApp::getCommandLineArgsParamHelper(local_app), ";");
-    args = sampledCommandLineArgs(_row_data, full_args_name);
+
+    bool has_brackets = false;
+    if (cli_args_name.size())
+    {
+      has_brackets = cli_args_name[0].find("[") != std::string::npos;
+      for (unsigned int i = 1; i < cli_args_name.size(); ++i)
+        if (has_brackets != (cli_args_name[i].find("[") != std::string::npos))
+          mooseError("If the bracket is used, it must be provided to every parameter.");
+    }
+    if (!has_brackets && cli_args_name.size() != _sampler.getNumberOfCols())
+      mooseError("Number of command line arguments does not match number of sampler columns.");
+
+    for (unsigned int i = 0; i < cli_args_name.size(); ++i)
+    {
+      if (has_brackets)
+      {
+        const std::vector<std::string> & vector_param = MooseUtils::split(cli_args_name[i], "[");
+        const std::vector<std::string> & index_string =
+            MooseUtils::split(vector_param[1].substr(0, vector_param[1].find("]")), ",");
+
+        oss << vector_param[0] << "='";
+        std::vector<unsigned int> col_count;
+        for (unsigned j = 0; j < index_string.size(); ++j)
+        {
+          if (index_string[j].find("(") != std::string::npos)
+            oss << std::stod(index_string[j].substr(index_string[j].find("(") + 1));
+          else
+          {
+            unsigned int index = MooseUtils::stringToInteger(index_string[j]);
+            if (index >= _row_data.size())
+              mooseError("The provided global column index (",
+                         index,
+                         ") for ",
+                         vector_param[0],
+                         " is out of bound.");
+            oss << Moose::stringify(_row_data[index]);
+            if (std::find(col_count.begin(), col_count.end(), index) == col_count.end())
+              col_count.push_back(index);
+          }
+          if (j != index_string.size() - 1)
+            oss << " ";
+        }
+        oss << "';";
+      }
+      else
+      {
+        oss << cli_args_name[i] << "=" << Moose::stringify(_row_data[i]) << ";";
+      }
+    }
+
+    args = oss.str();
   }
 
   _my_communicator.broadcast(args);
+
   return args;
 }
 
@@ -240,79 +330,4 @@ SamplerFullSolveMultiApp::updateRowData(dof_id_type local_index)
 
   mooseAssert(local_index == _local_row_index,
               "Local index must be equal or one greater than the index previously called.");
-}
-
-std::string
-SamplerFullSolveMultiApp::sampledCommandLineArgs(const std::vector<Real> & row,
-                                                 const std::vector<std::string> & full_args_name)
-{
-  std::ostringstream oss;
-
-  // Find parameters that are meant to be assigned by sampler values
-  std::vector<std::string> cli_args_name;
-  for (const auto & fan : full_args_name)
-  {
-    // If it has an '=', then it is not meant to be modified
-    if (fan.find("=") == std::string::npos)
-      cli_args_name.push_back(fan);
-    else
-      oss << fan << ";";
-  }
-
-  // Make sure the parameters either all have brackets, or none of them do
-  bool has_brackets = false;
-  if (cli_args_name.size())
-  {
-    has_brackets = cli_args_name[0].find("[") != std::string::npos;
-    for (unsigned int i = 1; i < cli_args_name.size(); ++i)
-      if (has_brackets != (cli_args_name[i].find("[") != std::string::npos))
-        ::mooseError("If the bracket is used, it must be provided to every parameter.");
-  }
-  if (!has_brackets && cli_args_name.size() && cli_args_name.size() != row.size())
-    ::mooseError("Number of command line arguments does not match number of sampler columns.");
-
-  for (unsigned int i = 0; i < cli_args_name.size(); ++i)
-  {
-    // Assign bracketed parameters
-    if (has_brackets)
-    {
-      // Split param name and vector assignment: "param[0,(3.14),1]" -> {"param", "0,(3.14),1]"}
-      const std::vector<std::string> & vector_param = MooseUtils::split(cli_args_name[i], "[");
-      // Get inices of vector: "0,(3.14),1]" -> {"0", "(3.14)", "1"}
-      const std::vector<std::string> & index_string =
-          MooseUtils::split(vector_param[1].substr(0, vector_param[1].find("]")), ",");
-
-      // Loop through indices and assign parameter: param='row[0] 3.14 row[1]'
-      oss << vector_param[0] << "='";
-      std::string sep = "";
-      for (const auto & istr : index_string)
-      {
-        oss << sep;
-        sep = " ";
-        // If the value is enclosed in parentheses, then it isn't an index, it's a value
-        if (istr.find("(") != std::string::npos)
-          oss << std::stod(istr.substr(istr.find("(") + 1));
-        // Assign the value from row if it is an index
-        else
-        {
-          unsigned int index = MooseUtils::stringToInteger(istr);
-          if (index >= row.size())
-            ::mooseError("The provided global column index (",
-                         index,
-                         ") for ",
-                         vector_param[0],
-                         " is out of bound.");
-          oss << Moose::stringify(row[index]);
-        }
-      }
-      oss << "';";
-    }
-    // Assign scalar parameters
-    else
-    {
-      oss << cli_args_name[i] << "=" << Moose::stringify(row[i]) << ";";
-    }
-  }
-
-  return oss.str();
 }
