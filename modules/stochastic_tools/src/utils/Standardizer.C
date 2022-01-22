@@ -72,6 +72,8 @@ Standardizer::computeSet(const RealEigenMatrix & input)
   // Store in std:vector format
   _mean.resize(n);
   _stdev.resize(n);
+  // std::cout << "Mean is " << mean << std::endl;
+  // std::cout << "Std is " << stdev << std::endl;
   RealEigenVector::Map(&_mean[0], n) = mean;
   RealEigenVector::Map(&_stdev[0], n) = stdev;
 }

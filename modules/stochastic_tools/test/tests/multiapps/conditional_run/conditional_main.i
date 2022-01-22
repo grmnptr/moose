@@ -12,7 +12,7 @@
 [Samplers]
   [mc]
     type = MonteCarlo
-    num_rows = 5
+    num_rows = 1
     distributions = 'uniform_0'
   []
   [cart]

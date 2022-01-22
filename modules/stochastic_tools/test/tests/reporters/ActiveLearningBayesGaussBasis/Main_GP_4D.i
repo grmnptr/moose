@@ -2,34 +2,35 @@
 []
 
 [Distributions]
-  [mu1]
-    type = Normal
-    mean = 0.0
-    standard_deviation = 0.5
+  [k_dist]
+    type = Uniform
+    lower_bound = 0
+    upper_bound = 20
   []
-  [mu2]
-    type = Normal
-    mean = 1
-    standard_deviation = 0.5
+  [q_dist]
+    type = Uniform
+    lower_bound = 7000
+    upper_bound = 13000
   []
-  # [mu1]
-  #   type = Uniform
-  #   lower_bound = 1
-  #   upper_bound = 10
-  # []
-  # [mu2]
-  #   type = Uniform
-  #   lower_bound = 9000
-  #   upper_bound = 11000
-  # []
+  [L_dist]
+    type = Uniform
+    lower_bound = 0.0
+    upper_bound = 0.1
+  []
+  [Tinf_dist]
+    type = Uniform
+    lower_bound = 270
+    upper_bound = 330
+  []
 []
 
 [Samplers]
   [mc]
     type = MCT
     num_rows = 1
-    distributions = 'mu1 mu2'
+    distributions = 'k_dist q_dist L_dist Tinf_dist'
     seed = 10
+    execute_on = PRE_MULTIAPP_SETUP
   []
 []
 
@@ -37,23 +38,32 @@
   [sub]
     type = SamplerFullSolveMultiApp
     sampler = mc
-    input_files = 'Sub.i' # 'Sub_new.i'
+    input_files = 'Sub4D.i' # 'Sub_new.i'
     mode = batch-reset
     should_run_reporter = conditional/need_sample
   []
 []
 
-[Transfers]
-  [param]
-    type = SamplerParameterTransfer
+[Controls]
+  [cmdline]
+    type = MultiAppCommandLineControl
     multi_app = sub
     sampler = mc
-    parameters = 'BCs/left/value BCs/right/value' # 'Materials/conductivity/prop_values Kernels/source/value' #
-    to_control = 'stochastic'
+    param_names = 'Materials/conductivity/prop_values Kernels/source/value Mesh/xmax BCs/right/value'
   []
+[]
+
+[Transfers]
+  # [param]
+  #   type = SamplerParameterTransfer
+  #   multi_app = sub
+  #   sampler = mc
+  #   parameters = 'Materials/conductivity/prop_values Kernels/source/value Mesh/xmax BCs/right/value'
+  #   to_control = 'stochastic'
+  # []
   [reporter_transfer]
     type = SamplerReporterTransfer
-    from_reporter = 'average/value'
+    from_reporter = 'avg/value'
     stochastic_reporter = 'conditional' # constant
     multi_app = sub
     sampler = mc
@@ -66,7 +76,7 @@
   #   # execute_on = 'initial timestep_begin' #
   # []
   [conditional]
-    type = AL_ADAM # ActiveLearningGP # 
+    type =  AL_ADAM # ActiveLearningGP #
     sampler = mc
     # output_value = constant/reporter_transfer:average:value
     parallel_type = ROOT
@@ -88,13 +98,13 @@
     # p = 1.0
     signal_variance = 1.0                 #Use a signal variance of 1 in the kernel
     noise_variance = 1e-4                    #A small amount of noise can help with numerical stability
-    length_factor = '1.0 1.0'         #Select a length factor for each parameter (k and q)
+    length_factor = '1.0 1.0 1.0 1.0'         #Select a length factor for each parameter (k and q)
   []
 []
 
 [Executioner]
   type = Transient
-  num_steps = 13
+  num_steps = 15
 []
 
 [Outputs]

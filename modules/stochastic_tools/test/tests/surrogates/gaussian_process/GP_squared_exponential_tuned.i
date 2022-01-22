@@ -23,7 +23,7 @@
   []
   [test_sample]
     type = MonteCarlo
-    num_rows = 100
+    num_rows = 1
     distributions = 'k_dist q_dist'
     execute_on = PRE_MULTIAPP_SETUP
   []
@@ -117,7 +117,7 @@
     type=SquaredExponentialCovariance
     signal_variance = 1                       #Use a signal variance of 1 in the kernel
     noise_variance = 1e-3                     #A small amount of noise can help with numerical stability
-    length_factor = '0.38971 0.38971'         #Select a length factor for each parameter (k and q)
+    length_factor = '0.38971 0.38971'      #Select a length factor for each parameter (k and q)
   []
 []
 

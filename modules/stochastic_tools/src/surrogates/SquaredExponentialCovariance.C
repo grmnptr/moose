@@ -56,7 +56,8 @@ SquaredExponentialCovariance::SquaredExponentialFunction(RealEigenMatrix & K,
   unsigned int num_samples_x = x.rows();
   unsigned int num_samples_xp = xp.rows();
   unsigned int num_params_x = x.cols();
-
+  // std::cout << "x " << Moose::stringify(x) << std::endl;
+  // std::cout << "xp " << Moose::stringify(xp) << std::endl;
   mooseAssert(num_params_x == xp.cols(),
               "Number of parameters do not match in covariance kernel calculation");
 
@@ -68,8 +69,10 @@ SquaredExponentialCovariance::SquaredExponentialFunction(RealEigenMatrix & K,
       Real r_squared_scaled = 0;
       for (unsigned int kk = 0; kk < num_params_x; ++kk)
         r_squared_scaled += std::pow((x(ii, kk) - xp(jj, kk)) / length_factor[kk], 2);
+      // std::cout << "r_squared_scaled " << r_squared_scaled << std::endl;
       K(ii, jj) = sigma_f_squared * std::exp(-r_squared_scaled / 2.0);
     }
+    // std::cout << "K " << Moose::stringify(K) << std::endl;
     if (is_self_covariance)
       K(ii, ii) += sigma_n_squared;
   }

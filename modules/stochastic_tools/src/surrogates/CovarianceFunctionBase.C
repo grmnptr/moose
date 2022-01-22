@@ -100,3 +100,15 @@ CovarianceFunctionBase::getTuningData(std::string name,
     size = _length_factor.size();
   }
 }
+
+Real
+CovarianceFunctionBase::getSignalVariance() const
+{
+  return _sigma_f_squared;
+}
+
+std::vector<Real>
+CovarianceFunctionBase::getLengthFactor() const
+{
+  return _length_factor;
+}

@@ -28,7 +28,7 @@ ActiveLearningGP::validParams()
   params += CovarianceInterface::validParams();
   params.addClassDescription("Evaluates parsed function to determine if sample needs to be "
                              "evaluated, otherwise data is set to a default value.");
-  params.addRequiredParam<ReporterName>("output_value", "Value of the model output from the SubApp.");
+  // params.addRequiredParam<ReporterName>("output_value", "Value of the model output from the SubApp.");
   params.addRequiredParam<SamplerName>("sampler", "The sampler object.");
   params.addRequiredParam<UserObjectName>("covariance_function", "Name of covariance function.");
   params.addParam<bool>(
@@ -49,15 +49,22 @@ ActiveLearningGP::ActiveLearningGP(
     const InputParameters & parameters)
   : ActiveLearningReporterTempl<Real>(parameters),
   CovarianceInterface(parameters),
-  _output_value(getReporterValue<std::vector<Real>>("output_value")),
+  // _output_value(getReporterValue<std::vector<Real>>("output_value")),
   _step(getCheckedPointerParam<FEProblemBase *>("_fe_problem_base")->timeStep()),
   _sampler(getSampler("sampler")),
+  _param_standardizer(declareModelData<StochasticTools::Standardizer>("_param_standardizer")),
+  _data_standardizer(declareModelData<StochasticTools::Standardizer>("_data_standardizer")),
   _covariance_function(
       getCovarianceFunctionByName(getParam<UserObjectName>("covariance_function"))),
   _do_tuning(isParamValid("tune_parameters")),
   _tao_options(getParam<std::string>("tao_options")),
   _show_tao(getParam<bool>("show_tao")),
   _tao_comm(MPI_COMM_SELF),
+  _covar_type(declareModelData<std::string>("_covar_type", _covariance_function->type())),
+  _training_params(declareModelData<RealEigenMatrix>("_training_params")),
+  _K(declareModelData<RealEigenMatrix>("_K")),
+  _K_results_solve(declareModelData<RealEigenMatrix>("_K_results_solve")),
+  // _K_cho_decomp(declareModelData<Eigen::LLT<RealEigenMatrix>>("_K_cho_decomp")),
   _standardize_params(getParam<bool>("standardize_params")),
   _standardize_data(getParam<bool>("standardize_data")),
   _hyperparam_map(declareModelData<std::unordered_map<std::string, Real>>("_hyperparam_map")),
@@ -67,6 +74,9 @@ ActiveLearningGP::ActiveLearningGP(
   _inputs_sto.resize(_sampler.getNumberOfCols());
   _decision = true;
   _covar_type = _covariance_function->type();
+
+  _amp_sto = _covariance_function->getSignalVariance();
+  _len_sto = _covariance_function->getLengthFactor();
 
   _num_tunable = 0;
   std::vector<std::string> tune_parameters(getParam<std::vector<std::string>>("tune_parameters"));
@@ -249,15 +259,34 @@ ActiveLearningGP::FormFunctionGradient(Tao /*tao*/,
     {
       _covariance_function->computedKdhyper(dKdhp, _training_params, hyper_param_name, ii);
       RealEigenMatrix tmp = alpha * dKdhp - _K_cho_decomp.solve(dKdhp);
-      grad.set(std::get<0>(iter->second) + ii, -tmp.trace() / 2.0);
+      Real grad1 = -tmp.trace() / 2.0;
+      // if (hyper_param_name.compare("length_factor") == 0)
+      // {
+      //   grad1 += -(std::log(_covariance_function->getLengthFactor()[ii])-0.0) * 1/_covariance_function->getLengthFactor()[ii];
+      // } else
+      // {
+      //   grad1 += -(std::log(_covariance_function->getSignalVariance())-0.0) * 1/_covariance_function->getSignalVariance();
+      // }
+      // std::cout << hyper_param_name << std::endl;
+      grad.set(std::get<0>(iter->second) + ii, grad1);
     }
   }
-  //
+
+  // std::cout << _covariance_function->getSignalVariance() << std::endl;
+  // std::cout << Moose::stringify(_covariance_function->getLengthFactor()) << std::endl;
   Real log_likelihood = 0;
   log_likelihood += -(_training_data.transpose() * _K_results_solve)(0, 0);
   log_likelihood += -std::log(_K.determinant());
+
+  // log_likelihood += -std::pow(((std::log(_covariance_function->getSignalVariance()) - 0.0) / 1.0) , 2);
+  // std::vector<Real> len1;
+  // len1 = _covariance_function->getLengthFactor();
+  // for (unsigned int ii = 0; ii < len1.size(); ++ii)
+  //   log_likelihood += -std::pow(((std::log(len1[ii]) - 0.0) / 1.0) , 2);
+
   log_likelihood += -_training_data.rows() * std::log(2 * M_PI);
   log_likelihood = -log_likelihood / 2;
+  std::cout << "Starting loss " << log_likelihood << std::endl;
   *f = log_likelihood;
 }
 
@@ -324,6 +353,8 @@ ActiveLearningGP::Predict(const std::vector<Real> & inputs)
 
   _param_standardizer.getStandardized(test_points);
 
+  // std::cout << Moose::stringify(test_points) << std::endl;
+
   RealEigenMatrix K_train_test(_training_params.rows(), test_points.rows());
   _covariance_function->computeCovarianceMatrix(K_train_test, _training_params, test_points, false);
   RealEigenMatrix K_test(test_points.rows(), test_points.rows());
@@ -331,6 +362,7 @@ ActiveLearningGP::Predict(const std::vector<Real> & inputs)
 
   // Compute the predicted mean value (centered)
   RealEigenMatrix pred_value = (K_train_test.transpose() * _K_results_solve);
+  // std::cout << Moose::stringify(pred_value) << std::endl;
   // De-center/scale the value and store for return
   _data_standardizer.getDestandardized(pred_value);
 
@@ -339,6 +371,7 @@ ActiveLearningGP::Predict(const std::vector<Real> & inputs)
 
   // Vairance computed, take sqrt for standard deviation, scale up by training data std and store
   RealEigenMatrix std_dev_mat = pred_var.array().sqrt();
+  // std::cout << Moose::stringify(std_dev_mat) << std::endl;
   _data_standardizer.getDescaled(std_dev_mat);
   // std_dev = std_dev_mat(0, 0);
 
@@ -356,44 +389,83 @@ ActiveLearningGP::needSample(const std::vector<Real> & row,
                                               dof_id_type,
                                               Real & val)
 {
-  int N = 12;
+  int N = 13;
   if (_step < N)
   {
+    // std::cout << "Here ***** " << val << std::endl;
     if (_step > 1)
     {
-      _outputs_sto.push_back(_output_value[0]);
+      _outputs_sto.push_back(val);
       for (unsigned int k = 0; k < _inputs_sto.size(); ++k)
-        _inputs_sto[k].push_back(_inputs_prev[k]);
+        _inputs_sto[k].push_back(row[k]); // _inputs_prev[k]
     }
+    // std::cout << "Inputs 1 " << Moose::stringify(_inputs_sto[0]) << std::endl;
+    // std::cout << "Inputs 2 " << Moose::stringify(_inputs_sto[1]) << std::endl;
+    // std::cout << "Outputs " << Moose::stringify(_outputs_sto) << std::endl;
     _decision = true;
   } else if (_step == N)
   {
+    _outputs_sto.push_back(val);
+    for (unsigned int k = 0; k < _inputs_sto.size(); ++k)
+      _inputs_sto[k].push_back(row[k]); // _inputs_prev[k]
+    // Train();
+    // std::cout << Moose::stringify(_inputs_sto) << std::endl;
+    // std::cout << Moose::stringify(_outputs_sto) << std::endl;
     Train();
-    std::vector<Real> result = Predict(row);
-    std::cout << Moose::stringify(result) << std::endl;
-    if (result[1]/result[0] <= 0.01)
-    {
-      _decision = false;
-      val = result[0];
-    } else
-      _decision = true;
+    // std::cout << Moose::stringify(row) << std::endl;
+
+    // std::vector<Real> result = Predict(row);
+    // std::cout << Moose::stringify(result) << std::endl;
+    // _decision = false;
+    // val = result[0];
+
+    // if (std::abs(result[0]-0.9)/result[1] > 2.0)
+    // {
+    //   _decision = false;
+    //   val = result[0];
+    // } else
+    //   _decision = true;
   } else
   {
     if (_decision == true)
     {
-      _outputs_sto.push_back(_output_value[0]);
+      _outputs_sto.push_back(val);
       for (unsigned int k = 0; k < _inputs_sto.size(); ++k)
-        _inputs_sto[k].push_back(_inputs_prev[k]);
+        _inputs_sto[k].push_back(row[k]); // _inputs_prev[k]
       Train();
     }
+
     std::vector<Real> result = Predict(row);
     std::cout << Moose::stringify(result) << std::endl;
-    if (result[1]/result[0] <= 0.01)
+    Real U_val;
+    U_val = std::abs(result[0]-0.9)/result[1];
+    std::cout << "U function " << U_val << std::endl;
+    if (U_val > 2.0)
     {
-      _decision = false;
+      std::cout << "Here" << std::endl;
       val = result[0];
+      _decision = false;
     } else
       _decision = true;
+
+
+    // if (_decision == true)
+    // {
+    //   _outputs_sto.push_back(_output_value[0]);
+    //   for (unsigned int k = 0; k < _inputs_sto.size(); ++k)
+    //     _inputs_sto[k].push_back(row[k]); // _inputs_prev[k]
+    //   Train_ADAM(1000);
+    // }
+    // std::vector<Real> result = Predict(row);
+    // Real U_val;
+    // U_val = std::abs(result[0]-0.9)/result[1];
+    // std::cout << "U function " << U_val << std::endl;
+    // if (U_val > 2.0)
+    // {
+    //   _decision = false;
+    //   val = result[0];
+    // } else
+    //   _decision = true;
   }
   _inputs_prev = row;
   return _decision;

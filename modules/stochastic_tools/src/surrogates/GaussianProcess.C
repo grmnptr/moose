@@ -56,6 +56,8 @@ GaussianProcess::evaluate(const std::vector<Real> & x, Real & std_dev) const
   unsigned int _n_params = _training_params.cols();
   unsigned int _num_tests = 1;
 
+  // std::cout << "Here " << Moose::stringify(x) << std::endl;
+
   mooseAssert(x.size() == _n_params,
               "Number of parameters provided for evaluation does not match number of parameters "
               "used for training.");
