@@ -66,6 +66,7 @@
     standardize_data = 'true'                 #Center and scale the training data
     sampler = train_sample
     response = results/data:avg:value
+    show_tao = 'true'
   []
 []
 
@@ -74,7 +75,7 @@
     type=SquaredExponentialCovariance
     signal_variance = 1                       #Use a signal variance of 1 in the kernel
     noise_variance = 1e-6                     #A small amount of noise can help with numerical stability
-    length_factor = '0.38971 0.38971'         #Select a length factor for each parameter (k and q)
+    length_factor = '0.01 100.0' # '0.38971 0.38971'         #Select a length factor for each parameter (k and q)
   []
 []
 

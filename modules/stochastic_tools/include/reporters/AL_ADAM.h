@@ -16,11 +16,11 @@
 #include "CovarianceFunctionBase.h"
 #include "CovarianceInterface.h"
 
-class ActiveLearningGP : public ActiveLearningReporterTempl<Real>, public CovarianceInterface
+class AL_ADAM : public ActiveLearningReporterTempl<Real>, public CovarianceInterface
 {
 public:
   static InputParameters validParams();
-  ActiveLearningGP(const InputParameters & parameters);
+  AL_ADAM(const InputParameters & parameters);
 
   CovarianceFunctionBase * getCovarPtr() const { return _covariance_function; }
 
@@ -41,7 +41,13 @@ protected:
 
   void SetupData(const std::vector<std::vector<Real>> & inputs, const std::vector<Real> & outputs);
 
-  void Train();
+  // void Train();
+
+  void Train_ADAM(const unsigned int & iters);
+
+  Real getLoss();
+
+  std::vector<Real> getGradient();
 
   // write stored hyperparam_vecs to PetscVec
   void mapToVec(libMesh::PetscVector<Number> & theta) const;
@@ -49,23 +55,25 @@ protected:
   // loads PetscVec to stored hyperparam_vecs
   void vecToMap(libMesh::PetscVector<Number> & theta);
 
+  std::vector<Real> Predict_ADAM(const std::vector<Real> & inputs);
+
   // Sets bounds for hyperparameters
-  void buildHyperParamBounds(libMesh::PetscVector<Number> & theta_l,
-                             libMesh::PetscVector<Number> & theta_u) const;
+  // void buildHyperParamBounds(libMesh::PetscVector<Number> & theta_l,
+  //                            libMesh::PetscVector<Number> & theta_u) const;
 
   // Wrapper for PETSc function callback
-  static PetscErrorCode
-  FormFunctionGradientWrapper(Tao tao, Vec theta, PetscReal * f, Vec Grad, void * ptr);
+  // static PetscErrorCode
+  // FormFunctionGradientWrapper(Tao tao, Vec theta, PetscReal * f, Vec Grad, void * ptr);
 
   // Computes Gradient of the loss function
-  void FormFunctionGradient(Tao tao, Vec theta, PetscReal * f, Vec Grad);
+  // void FormFunctionGradient(Tao tao, Vec theta, PetscReal * f, Vec Grad);
 
-  PetscErrorCode FormInitialGuess(ActiveLearningGP * GP_ptr, Vec theta);
+  // PetscErrorCode FormInitialGuess(AL_ADAM * GP_ptr, Vec theta);
 
   // Routine to perform hyperparameter tuning
-  PetscErrorCode hyperparamTuning();
+  // PetscErrorCode hyperparamTuning();
 
-  std::vector<Real> Predict(const std::vector<Real> & inputs);
+  // std::vector<Real> Predict(const std::vector<Real> & inputs);
 
   /**
    * This evaluates the inputted function to determine whether a multiapp solve is
@@ -154,6 +162,8 @@ private:
 
   std::vector<Real> _inputs_prev;
 
+  // Real _output_prev;
+
   bool _decision;
 
   std::vector<Real> _len_sto;
@@ -163,7 +173,7 @@ private:
 
 template <typename T>
 T &
-ActiveLearningGP::declareModelData(const std::string & data_name)
+AL_ADAM::declareModelData(const std::string & data_name)
 {
   RestartableData<T> & data_ref = declareModelDataHelper<T>(data_name);
   return data_ref.set();
@@ -171,7 +181,7 @@ ActiveLearningGP::declareModelData(const std::string & data_name)
 
 template <typename T>
 T &
-ActiveLearningGP::declareModelData(const std::string & data_name, const T & value)
+AL_ADAM::declareModelData(const std::string & data_name, const T & value)
 {
   RestartableData<T> & data_ref = declareModelDataHelper<T>(data_name);
   data_ref.set() = value;
@@ -180,7 +190,7 @@ ActiveLearningGP::declareModelData(const std::string & data_name, const T & valu
 
 template <typename T>
 RestartableData<T> &
-ActiveLearningGP::declareModelDataHelper(const std::string & data_name)
+AL_ADAM::declareModelDataHelper(const std::string & data_name)
 {
   auto data_ptr = std::make_unique<RestartableData<T>>(data_name, nullptr);
   RestartableDataValue & value =

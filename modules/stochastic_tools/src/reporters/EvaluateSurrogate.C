@@ -95,6 +95,7 @@ EvaluateSurrogate::execute()
   for (const auto ind : make_range(_sampler.getNumberOfLocalRows()))
   {
     const std::vector<Real> data = _sampler.getNextLocalRow();
+    // std::cout << Moose::stringify(data) << std::endl;
     for (const auto m : make_range(_model.size()))
     {
       if (_real_values[m] && _real_std[m])
