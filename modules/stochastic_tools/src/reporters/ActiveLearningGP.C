@@ -31,6 +31,7 @@ ActiveLearningGP::validParams()
   // params.addRequiredParam<ReporterName>("output_value", "Value of the model output from the SubApp.");
   params.addRequiredParam<SamplerName>("sampler", "The sampler object.");
   params.addRequiredParam<UserObjectName>("covariance_function", "Name of covariance function.");
+  params.addParam<ReporterValueName>("flag_sample", "flag_sample", "Flag samples.");
   params.addParam<bool>(
       "standardize_params", true, "Standardize (center and scale) training parameters (x values)");
   params.addParam<bool>(
@@ -56,6 +57,7 @@ ActiveLearningGP::ActiveLearningGP(
   _data_standardizer(declareModelData<StochasticTools::Standardizer>("_data_standardizer")),
   _covariance_function(
       getCovarianceFunctionByName(getParam<UserObjectName>("covariance_function"))),
+  _flag_sample(declareValue<bool>("flag_sample")),
   _do_tuning(isParamValid("tune_parameters")),
   _tao_options(getParam<std::string>("tao_options")),
   _show_tao(getParam<bool>("show_tao")),
@@ -98,6 +100,7 @@ ActiveLearningGP::ActiveLearningGP(
       _num_tunable += size;
     }
   }
+  _flag_sample = false;
 }
 
 void
@@ -414,6 +417,11 @@ ActiveLearningGP::needSample(const std::vector<Real> & row,
     Train();
     // std::cout << Moose::stringify(row) << std::endl;
 
+    std::vector<Real> result = Predict(row);
+    std::cout << Moose::stringify(result) << std::endl;
+    _decision = false;
+    val = result[0];
+
     // std::vector<Real> result = Predict(row);
     // std::cout << Moose::stringify(result) << std::endl;
     // _decision = false;
@@ -427,26 +435,38 @@ ActiveLearningGP::needSample(const std::vector<Real> & row,
     //   _decision = true;
   } else
   {
-    if (_decision == true)
-    {
-      _outputs_sto.push_back(val);
-      for (unsigned int k = 0; k < _inputs_sto.size(); ++k)
-        _inputs_sto[k].push_back(row[k]); // _inputs_prev[k]
-      Train();
-    }
-
     std::vector<Real> result = Predict(row);
     std::cout << Moose::stringify(result) << std::endl;
-    Real U_val;
-    U_val = std::abs(result[0]-0.9)/result[1];
-    std::cout << "U function " << U_val << std::endl;
-    if (U_val > 2.0)
-    {
-      std::cout << "Here" << std::endl;
-      val = result[0];
-      _decision = false;
-    } else
-      _decision = true;
+    _decision = false;
+    val = result[0];
+    // if (_decision == true && _flag_sample == true)
+    // {
+    //   _outputs_sto.push_back(val);
+    //   for (unsigned int k = 0; k < _inputs_sto.size(); ++k)
+    //     _inputs_sto[k].push_back(row[k]); // _inputs_prev[k]
+    //   Train();
+    // }
+    //
+    // std::cout << Moose::stringify(_outputs_sto) << std::endl;
+    // std::vector<Real> result = Predict(row);
+    // std::cout << Moose::stringify(result) << std::endl;
+    // Real U_val;
+    // if (_flag_sample == false)
+    //   U_val = std::abs(result[0]-320.0)/result[1]; // result[1] / result[0]; //
+    // else
+    //   U_val = 100; // 1e-3; //
+    // std::cout << "U function " << U_val << std::endl;
+    // if (_flag_sample == true)
+    //   _flag_sample = false;
+    // if (U_val > 2.0)
+    // {
+    //   val = result[0];
+    //   _decision = false;
+    // } else
+    // {
+    //   _decision = true;
+    //   _flag_sample = true;
+    // }
 
 
     // if (_decision == true)

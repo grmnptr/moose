@@ -14,7 +14,7 @@
 /**
  * A class used to perform Monte Carlo Sampling
  */
-class MCT : public Sampler
+class MCT : public Sampler, public ReporterInterface
 {
 public:
   static InputParameters validParams();
@@ -30,6 +30,9 @@ protected:
 
   /// Distribution names
   const std::vector<DistributionName> & _distribution_names;
+
+  const bool & _flag_sample;
+
 private:
   /// Track the current step of the main App
   const int & _step;
@@ -38,5 +41,5 @@ private:
   // int _check_step;
   //
   // /// Storage for previously accepted samples by the decision reporter system
-  // std::vector<Real> _inputs_sto;
+  std::vector<Real> _inputs_sto;
 };
