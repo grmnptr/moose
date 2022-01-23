@@ -22,12 +22,15 @@ MCT::validParams()
       "distributions",
       "The distribution names to be sampled, the number of distributions provided defines the "
       "number of columns per matrix.");
+  params.addRequiredParam<ReporterName>("flag_sample", "Flag samples.");
   return params;
 }
 
 MCT::MCT(const InputParameters & parameters)
   : Sampler(parameters),
+    ReporterInterface(this),
     _distribution_names(getParam<std::vector<DistributionName>>("distributions")),
+    _flag_sample(getReporterValue<bool>("flag_sample")),
     _step(getCheckedPointerParam<FEProblemBase *>("_fe_problem_base")->timeStep())
 {
   for (const DistributionName & name : _distribution_names)
@@ -36,7 +39,7 @@ MCT::MCT(const InputParameters & parameters)
   setNumberOfRows(getParam<dof_id_type>("num_rows"));
   setNumberOfCols(_distributions.size());
   setNumberOfRandomSeeds(100000);
-  // _inputs_sto.resize(_distributions.size());
+  _inputs_sto.resize(_distributions.size());
   // _check_step = 0;
 }
 
@@ -46,5 +49,10 @@ MCT::computeSample(dof_id_type /*row_index*/, dof_id_type col_index)
   // const bool sample = _step > 1 && col_index == 0 && _check_step != _step;
   // _check_step = _step;
   // return _inputs_sto[col_index];
-  return _distributions[col_index]->quantile(getRand(_step));
+
+  if (_flag_sample == false)
+    _inputs_sto[col_index] = _distributions[col_index]->quantile(getRand(_step));
+  return _inputs_sto[col_index];
+
+  // return _distributions[col_index]->quantile(getRand(_step));
 }

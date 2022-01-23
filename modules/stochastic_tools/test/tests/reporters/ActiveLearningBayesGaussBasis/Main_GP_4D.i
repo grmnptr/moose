@@ -29,6 +29,7 @@
     type = MCT
     num_rows = 1
     distributions = 'k_dist q_dist L_dist Tinf_dist'
+    flag_sample = 'conditional/flag_sample'
     seed = 10
     execute_on = PRE_MULTIAPP_SETUP
   []
@@ -76,7 +77,7 @@
   #   # execute_on = 'initial timestep_begin' #
   # []
   [conditional]
-    type =  AL_ADAM # ActiveLearningGP #
+    type =  ActiveLearningGP # AL_ADAM # 
     sampler = mc
     # output_value = constant/reporter_transfer:average:value
     parallel_type = ROOT
@@ -89,6 +90,7 @@
     tuning_min = '1e-3 1e-3'
     tuning_max = '1000 1000'
     show_tao = 'true'
+    flag_sample = 'flag_sample'
   []
 []
 
@@ -104,7 +106,7 @@
 
 [Executioner]
   type = Transient
-  num_steps = 15
+  num_steps = 100
 []
 
 [Outputs]

@@ -112,6 +112,8 @@ private:
 
   CovarianceFunctionBase * _covariance_function;
 
+  bool & _flag_sample;
+
   bool _do_tuning;
 
   std::string _tao_options;
