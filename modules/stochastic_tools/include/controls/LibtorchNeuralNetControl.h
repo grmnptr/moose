@@ -36,7 +36,7 @@ private:
 
   bool _initialized;
 
-  std::vector<std::string> > _param_names;
+  std::vector<std::string> > _control_names;
 
   std::vector<PostprocessorName> _response_names, _postprocessor_names;
 
