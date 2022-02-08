@@ -31,12 +31,20 @@ public:
   virtual void execute() override;
 
 private:
-  /// The target 1D time-dependent function for the postprocessor
-  const Function & _target;
-  
+  std::vector<Real> _old_response;
+  std::vector<Real> _current_response;
+
+  bool _initialized;
+
+  std::vector<std::string> > _param_names;
+
+  std::vector<PostprocessorName> _response_names, _postprocessor_names;
+
 #ifdef TORCH_ENABLED
   /// Pointer to the neural net object which is supposed to be used to control
   /// the input values
   std::shared_ptr<StochasticTools::LibtorchSimpleNeuralNet> _nn;
+
+  void loadControlNeuralNet(const StochasticTools::LibtorchSimpleNeuralNet & nn);
 #endif
 };

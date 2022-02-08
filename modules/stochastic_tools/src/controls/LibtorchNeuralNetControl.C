@@ -8,7 +8,6 @@
 //* https://www.gnu.org/licenses/lgpl-2.1.html
 
 #include "LibtorchNeuralNetControl.h"
-#include "Function.h"
 #include "Transient.h"
 
 registerMooseObject("MooseApp", LibtorchNeuralNetControl);
@@ -20,47 +19,42 @@ LibtorchNeuralNetControl::validParams()
   params.addClassDescription(
       "Sets the value of a 'Real' input parameter (or postprocessor) based on a Proportional "
       "Integral Derivative control of a postprocessor to match a target a target value.");
-  // params.addRequiredParam<PostprocessorName>(
-  //     "postprocessor", "The postprocessor to watch for controlling the specified parameter.");
-  params.addRequiredParam<FunctionName>("target",
-                                        "The target value 1D time function for the postprocessor");
-  params.addRequiredParam<std::string>(
-      "parameter",
-      "The input parameter(s) to control. Specify a single parameter name and all "
-      "parameters in all objects matching the name will be updated");
-  params.addRequiredParam<PostprocessorName>("postprocessor",
-                                             "The postprocessor which stores the control values.");
-  // params.addParam<std::string>("parameter_pp",
-  //                              "The postprocessor to control. Should be accessed by reference by
-  //                              " "the objects depending on its value.");
-  // params.addParam<Real>(
-  //     "start_time", -std::numeric_limits<Real>::max(), "The time to start the PID controller
-  //     at");
-  // params.addParam<Real>(
-  //     "stop_time", std::numeric_limits<Real>::max(), "The time to stop the PID controller at");
-  // params.addParam<bool>(
-  //     "reset_every_timestep",
-  //     false,
-  //     "Reset the PID integral when changing timestep, for coupling iterations within a
-  //     timestep");
-  // params.addParam<bool>("reset_integral_windup",
-  //                       true,
-  //                       "Reset the PID integral when the error crosses zero and the integral is "
-  //                       "larger than the error.");
+  params.addRequiredParam<std::vector<std::string>>("parameters",
+                                                    "The input parameter(s) to control.");
+  params.addRequiredParam<std::vector<PostprocessorName>>(
+      "responses", "The responses (prostprocessors) which are used for the control.");
+  params.addRequiredParam<std::vector<PostprocessorName>>(
+      "postprocessors", "The postprocessors which stores the control values.");
 
   return params;
 }
 
 LibtorchNeuralNetControl::LibtorchNeuralNetControl(const InputParameters & parameters)
-  : Control(parameters), _target(getFunction("target"))
+  : Control(parameters),
+    _initialized(false),
+    _param_names(getParam<std::vector<std::string>>("parameters")),
+    _response_names(getParam<std::vector<PostprocessorName>>("responses")),
+    _postprocessor_names(getParam<std::vector<PostprocessorName>>("postprocessors"))
 {
 }
 
 void
 LibtorchNeuralNetControl::execute()
 {
-  Point dummy;
-  auto value = _target.value(_t, dummy);
-  setControllableValue<Real>("parameter", value);
+  _current_response.clear();
+  for (unsigned int resp_i = 0; resp_i < _response_names.size(); ++resp_i)
+    _current_response.push_back(getPostprocessorValueByName(_respons_names[resp_i]);
+
+  if (!_initialized)
+  {
+      _old_response = _current_response;
+      _initialized = true;
+  }
+
+  std::vector<Real> raw_input(_old_response);
+  raw_input.insert(raw_input.end(), _current_response.begin(), _current_response.end());
+
+
+    _old_response _nn->forward() setControllableValue<Real>("parameter", value);
   _fe_problem.setPostprocessorValueByName(getParam<PostprocessorName>("postprocessor"), value);
 }
