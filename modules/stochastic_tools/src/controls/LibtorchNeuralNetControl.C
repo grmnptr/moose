@@ -32,7 +32,7 @@ LibtorchNeuralNetControl::validParams()
 LibtorchNeuralNetControl::LibtorchNeuralNetControl(const InputParameters & parameters)
   : Control(parameters),
     _initialized(false),
-    _param_names(getParam<std::vector<std::string>>("parameters")),
+    _control_names(getParam<std::vector<std::string>>("parameters")),
     _response_names(getParam<std::vector<PostprocessorName>>("responses")),
     _postprocessor_names(getParam<std::vector<PostprocessorName>>("postprocessors"))
 {
@@ -41,20 +41,36 @@ LibtorchNeuralNetControl::LibtorchNeuralNetControl(const InputParameters & param
 void
 LibtorchNeuralNetControl::execute()
 {
+  unsigned int n_responses = _response_names.size();
+  unsigned int n_controls = _control_names.size();
+
   _current_response.clear();
   for (unsigned int resp_i = 0; resp_i < _response_names.size(); ++resp_i)
-    _current_response.push_back(getPostprocessorValueByName(_respons_names[resp_i]);
+    _current_response.push_back(getPostprocessorValueByName(_respons_names[resp_i]));
 
   if (!_initialized)
   {
-      _old_response = _current_response;
-      _initialized = true;
+    _old_response = _current_response;
+    _initialized = true;
   }
 
-  std::vector<Real> raw_input(_old_response);
   raw_input.insert(raw_input.end(), _current_response.begin(), _current_response.end());
 
+  auto options = torch::TensorOptions().dtype(at::kDouble);
+  torch::Tensor input_tensor =
+      torch::from_blob(raw_input.data(), {1, 2 * n_responses}, options).to(at::kDouble);
 
-    _old_response _nn->forward() setControllableValue<Real>("parameter", value);
-  _fe_problem.setPostprocessorValueByName(getParam<PostprocessorName>("postprocessor"), value);
+  torch::Tensor output_tensor = _nn->forward(input_tensor);
+
+  std::vector<Real> converted_output = {output_tensor.data_ptr<Real>(),
+                                        output_tensor.data_ptr<Real>() + output_tensor.size(1)};
+
+  for (unsigned int control_i = 0; control_i < _control_names.size(); ++control_i)
+  {
+    setControllableValueByName<Real>(_control_names[control_i], converted_output[control_i]);
+    _fe_problem.setPostprocessorValueByName(_postprocessor_names[control_i],
+                                            converted_output[control_i]);
+  }
+
+  _old_response = _current_response;
 }
