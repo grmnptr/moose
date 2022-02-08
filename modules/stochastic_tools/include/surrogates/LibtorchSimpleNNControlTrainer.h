@@ -32,6 +32,8 @@ public:
 
   void trainEmulator();
 
+  void trainController();
+
 protected:
 #ifdef TORCH_ENABLED
 
@@ -58,6 +60,9 @@ protected:
 private:
   /// Response reporter names
   std::vector<ReporterName> _response_names;
+
+  /// Names of the functions describing the response constraints
+  std::vector<FunctionName> _response_constraints;
 
   /// Control reporter names
   std::vector<ReporterName> _control_names;
@@ -92,6 +97,9 @@ private:
 
   /// The learning rate for the optimization algorithm
   Real _learning_rate;
+
+  /// The control learning rate for the optimization algorithm
+  Real _control_learning_rate;
 
 #ifdef TORCH_ENABLED
   /// Pointer to the neural net object (initialized as null)
