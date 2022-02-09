@@ -30,13 +30,18 @@ public:
 
   virtual void execute() override;
 
+#ifdef TORCH_ENABLED
+  void
+  loadControlNeuralNet(const std::shared_ptr<StochasticTools::LibtorchSimpleNeuralNet> & input_nn);
+#endif
+
 private:
   std::vector<Real> _old_response;
   std::vector<Real> _current_response;
 
   bool _initialized;
 
-  std::vector<std::string> > _control_names;
+  std::vector<std::string> _control_names;
 
   std::vector<PostprocessorName> _response_names, _postprocessor_names;
 
@@ -44,7 +49,5 @@ private:
   /// Pointer to the neural net object which is supposed to be used to control
   /// the input values
   std::shared_ptr<StochasticTools::LibtorchSimpleNeuralNet> _nn;
-
-  void loadControlNeuralNet(const StochasticTools::LibtorchSimpleNeuralNet & nn);
 #endif
 };

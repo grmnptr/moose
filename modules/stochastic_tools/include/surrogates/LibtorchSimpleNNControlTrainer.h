@@ -34,6 +34,13 @@ public:
 
   void trainController();
 
+#ifdef TORCH_ENABLED
+  const std::shared_ptr<StochasticTools::LibtorchSimpleNeuralNet> & controlNeuralNet() const
+  {
+    return _control_nn;
+  }
+#endif
+
 protected:
 #ifdef TORCH_ENABLED
 
@@ -78,6 +85,12 @@ private:
 
   /// Number of epochs for the training
   unsigned int _no_epocs;
+
+  /// Number of control epochs for the training
+  unsigned int _no_control_epocs;
+
+  /// Number of control loops for the training
+  unsigned int _no_control_loops;
 
   /// Number of hidden layers in the neural net
   unsigned int & _no_hidden_layers;

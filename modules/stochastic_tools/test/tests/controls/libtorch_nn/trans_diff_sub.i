@@ -1,7 +1,7 @@
 [Functions]
   [src_func]
     type = ParsedFunction
-    value = "1000*sin(20*t)"
+    value = "2000*sin(20*t)"
   []
 []
 
@@ -57,16 +57,16 @@
 []
 
 [BCs]
-  [neumann_left]
-    type = NeumannBC
-    variable = T
-    boundary = 'left'
-    value = 0
-  []
+#  [neumann_left]
+#    type = NeumannBC
+#    variable = T
+#    boundary = 'left'
+#    value = 0
+#  []
   [neumann_rest]
     type = NeumannBC
     variable = T
-    boundary = 'right top bottom'
+    boundary = 'left right top bottom'
     value = 0
   []
 []
@@ -95,30 +95,25 @@
     value_type = min
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [T_avg]
-    type = ElementAverageValue
-    variable = T
-    execute_on = 'INITIAL TIMESTEP_END'
-  []
   [control_value]
     type = Receiver
     execute_on = 'INITIAL TIMESTEP_END'
   []
 []
 
-[Controls]
-  [bd_control]
-    type = LibtorchNeuralNetControl
-    target = "100*sin(10*t)"
-    parameter = "BCs/neumann_left/value"
-    postprocessor = "control_value"
-  []
-[]
+# [Controls]
+#  [bd_control]
+#    type = LibtorchNeuralNetControl
+#    parameters = "BCs/neumann_left/value"
+#    postprocessors = "control_value"
+#    responses = 'T_min T_max'
+#  []
+#[]
 
 [Reporters]
   [T_reporter]
     type = AccumulateReporter
-    reporters = 'T_avg/value T_min/value T_max/value control_value/value'
+    reporters = 'T_min/value T_max/value control_value/value'
   []
 []
 

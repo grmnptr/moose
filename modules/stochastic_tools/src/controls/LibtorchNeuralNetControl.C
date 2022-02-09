@@ -41,36 +41,54 @@ LibtorchNeuralNetControl::LibtorchNeuralNetControl(const InputParameters & param
 void
 LibtorchNeuralNetControl::execute()
 {
-  unsigned int n_responses = _response_names.size();
-  unsigned int n_controls = _control_names.size();
-
-  _current_response.clear();
-  for (unsigned int resp_i = 0; resp_i < _response_names.size(); ++resp_i)
-    _current_response.push_back(getPostprocessorValueByName(_respons_names[resp_i]));
-
-  if (!_initialized)
+  if (_nn != NULL)
   {
+
+    unsigned int n_responses = _response_names.size();
+    unsigned int n_controls = _control_names.size();
+
+    _current_response.clear();
+    for (unsigned int resp_i = 0; resp_i < _response_names.size(); ++resp_i)
+      _current_response.push_back(getPostprocessorValueByName(_response_names[resp_i]));
+
+    if (!_initialized)
+    {
+      _old_response = _current_response;
+      _initialized = true;
+    }
+
+    std::vector<Real> raw_input(_old_response);
+    raw_input.insert(raw_input.end(), _current_response.begin(), _current_response.end());
+
+    auto options = torch::TensorOptions().dtype(at::kDouble);
+    torch::Tensor input_tensor =
+        torch::from_blob(raw_input.data(), {1, 2 * n_responses}, options).to(at::kDouble);
+
+    torch::Tensor output_tensor = _nn->forward(input_tensor);
+
+    std::vector<Real> converted_output = {output_tensor.data_ptr<Real>(),
+                                          output_tensor.data_ptr<Real>() + output_tensor.size(1)};
+
+    for (unsigned int control_i = 0; control_i < _control_names.size(); ++control_i)
+    {
+      setControllableValueByName<Real>(_control_names[control_i], converted_output[control_i]);
+      _fe_problem.setPostprocessorValueByName(_postprocessor_names[control_i],
+                                              converted_output[control_i]);
+    }
+
     _old_response = _current_response;
-    _initialized = true;
   }
+}
 
-  raw_input.insert(raw_input.end(), _current_response.begin(), _current_response.end());
+void
+LibtorchNeuralNetControl::loadControlNeuralNet(
+    const std::shared_ptr<StochasticTools::LibtorchSimpleNeuralNet> & input_nn)
+{
+  _nn = std::make_shared<StochasticTools::LibtorchSimpleNeuralNet>(input_nn->name(),
+                                                                   input_nn->noInputs(),
+                                                                   input_nn->noHiddenLayers(),
+                                                                   input_nn->noNeuronsPerLayer(),
+                                                                   input_nn->noOutputs());
 
-  auto options = torch::TensorOptions().dtype(at::kDouble);
-  torch::Tensor input_tensor =
-      torch::from_blob(raw_input.data(), {1, 2 * n_responses}, options).to(at::kDouble);
-
-  torch::Tensor output_tensor = _nn->forward(input_tensor);
-
-  std::vector<Real> converted_output = {output_tensor.data_ptr<Real>(),
-                                        output_tensor.data_ptr<Real>() + output_tensor.size(1)};
-
-  for (unsigned int control_i = 0; control_i < _control_names.size(); ++control_i)
-  {
-    setControllableValueByName<Real>(_control_names[control_i], converted_output[control_i]);
-    _fe_problem.setPostprocessorValueByName(_postprocessor_names[control_i],
-                                            converted_output[control_i]);
-  }
-
-  _old_response = _current_response;
+  torch::load(_nn, input_nn->name());
 }
