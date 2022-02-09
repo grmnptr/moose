@@ -12,10 +12,20 @@
   [runner]
     type = FullSolveMultiApp
     input_files = 'trans_diff_sub.i'
+#    reset_apps = '0'
+#    reset_time = 1
+     no_backup_and_restore = true
   []
 []
 
 [Transfers]
+#  [nn_transfer]
+#    type = LibtorchNeuralNetTransfer
+#    multi_app = runner
+#    direction = 'to_multiapp'
+#    trainer_name = 'nn_trainer'
+#    control_name = bd_control
+#  []
   [r_transfer]
     type = MultiAppReporterTransfer
     multi_app = runner
@@ -25,23 +35,25 @@
   []
 []
 
-[Trainers]
-  [train]
-    type = LibtorchSimpleNNControlTrainer
-    sampler = dummy
-    response_reporter = 'results/T_max results/T_min'
-    response_constraints ='T_max_constraint T_min_constraint'
-    control_reporter = 'results/control_value'
-    no_epochs = 4000
-    no_batches = 5
-    no_hidden_layers = 2
-    no_neurons_per_layer = '32 16'
-    learning_rate = 0.0001
-    control_learning_rate = 0.01
-    filename = mynet.pt
-    read_from_file = false
-  []
-[]
+# [Trainers]
+#  [nn_trainer]
+#    type = LibtorchSimpleNNControlTrainer
+#    sampler = dummy
+#    response_reporter = 'results/T_max results/T_min'
+#    response_constraints ='T_max_constraint T_min_constraint'
+#    control_reporter = 'results/control_value'
+#    no_epocs = 8000
+#    no_control_epocs = 400
+#    no_control_loops = 2
+#    no_batches = 5
+#    no_hidden_layers = 3
+#    no_neurons_per_layer = '64 32 16'
+#    learning_rate = 0.0001
+#    control_learning_rate = 0.001
+#    filename = mynet.pt
+#    read_from_file = false
+#  []
+#[]
 
 [Reporters]
   [results]
@@ -56,7 +68,7 @@
 [Functions]
   [T_max_constraint]
     type = ParsedFunction
-    value = 'if(t > 320, 320, t)'
+    value = 'if(t > 310, 310, t)'
   []
   [T_min_constraint]
     type = ParsedFunction
@@ -64,7 +76,11 @@
   []
 []
 
+[Executioner]
+  type = Transient
+  num_steps = 2
+[]
+
 # [Outputs]
 #   csv = true
-#   execute = asdasda
 # []

@@ -26,7 +26,9 @@ LibtorchSimpleNNControlTrainer::validParams()
       "response_constraints", "Constraints on the postprocessor values in the reporters.");
 
   params.addParam<unsigned int>("no_batches", 1, "Number of batches.");
-  params.addParam<unsigned int>("no_epochs", 1, "Number of epochs.");
+  params.addParam<unsigned int>("no_epocs", 1, "Number of epochs.");
+  params.addParam<unsigned int>("no_control_epocs", 1, "Number of epochs for the control.");
+  params.addParam<unsigned int>("no_control_loops", 1, "Number of loops for training the control.");
   params.addParam<unsigned int>("no_hidden_layers", 0, "Number of hidden layers.");
   params.addParam<std::vector<unsigned int>>(
       "no_neurons_per_layer", std::vector<unsigned int>(), "Number of neurons per layer.");
@@ -50,7 +52,9 @@ LibtorchSimpleNNControlTrainer::LibtorchSimpleNNControlTrainer(const InputParame
     _response_constraints(getParam<std::vector<FunctionName>>("response_constraints")),
     _control_names(getParam<std::vector<ReporterName>>("control_reporter")),
     _no_batches(getParam<unsigned int>("no_batches")),
-    _no_epocs(getParam<unsigned int>("no_epochs")),
+    _no_epocs(getParam<unsigned int>("no_epocs")),
+    _no_control_epocs(getParam<unsigned int>("no_control_epocs")),
+    _no_control_loops(getParam<unsigned int>("no_control_loops")),
     _no_hidden_layers(declareModelData<unsigned int>("no_hidden_layers")),
     _no_neurons_per_layer(declareModelData<std::vector<unsigned int>>("no_neurons_per_layer")),
     _filename(getParam<std::string>("filename")),
@@ -86,6 +90,14 @@ LibtorchSimpleNNControlTrainer::LibtorchSimpleNNControlTrainer(const InputParame
   // Fixing the RNG seed to make sure every experiment is the same.
   // Otherwise sampling / stochastic gradient descent would be different.
   torch::manual_seed(getParam<unsigned int>("seed"));
+
+  _control_nn =
+      std::make_shared<StochasticTools::LibtorchSimpleNeuralNet>(_filename,
+                                                                 2 * _response_names.size(),
+                                                                 _no_hidden_layers,
+                                                                 _no_neurons_per_layer,
+                                                                 _control_names.size());
+  torch::save(_control_nn, _control_nn->name());
 #endif
 }
 
@@ -251,60 +263,64 @@ LibtorchSimpleNNControlTrainer::trainController()
   torch::Tensor input = torch::from_blob(start_vector.data(), {1, n_cols}, options).to(at::kDouble);
 
   // Begin training loop
-  for (unsigned int step_i = 1; step_i <= no_steps - 1; ++step_i)
+  for (unsigned int loop_i = 0; loop_i < _no_control_loops; ++loop_i)
   {
-    Real epoch_error = 100.0;
-    unsigned int epoch_counter = 0;
-    std::vector<Real> converted_prediction;
-
-    while (epoch_counter < _no_epocs && epoch_error > 1e-6)
+    for (unsigned int step_i = 1; step_i <= no_steps - 1; ++step_i)
     {
-      epoch_counter += 1;
+      Real epoch_error = 100.0;
+      unsigned int epoch_counter = 0;
+      std::vector<Real> converted_prediction;
 
-      optimizer.zero_grad();
-
-      torch::Tensor control_prediction = _control_nn->forward(input);
-
-      torch::Tensor extended_input = torch::cat({input, control_prediction}, -1).to(at::kDouble);
-
-      torch::Tensor value_prediction = _emulator_nn->forward(extended_input);
-
-      converted_prediction =
-          std::vector<Real>({value_prediction.data_ptr<Real>(),
-                             value_prediction.data_ptr<Real>() + value_prediction.size(1)});
-      std::vector<Real> constraints;
-      Point dummy;
-      for (unsigned int resp_i = 0; resp_i < n_responses; ++resp_i)
+      while (epoch_counter < _no_control_epocs && epoch_error > 1e-6)
       {
-        const Function & constraint_function(getFunctionByName(_response_constraints[resp_i]));
-        auto constraint = constraint_function.value(converted_prediction[resp_i], dummy);
-        constraints.push_back(constraint);
+        epoch_counter += 1;
+
+        optimizer.zero_grad();
+
+        torch::Tensor control_prediction = _control_nn->forward(input);
+
+        torch::Tensor extended_input = torch::cat({input, control_prediction}, -1).to(at::kDouble);
+
+        torch::Tensor value_prediction = _emulator_nn->forward(extended_input);
+
+        converted_prediction =
+            std::vector<Real>({value_prediction.data_ptr<Real>(),
+                               value_prediction.data_ptr<Real>() + value_prediction.size(1)});
+        std::vector<Real> constraints;
+        Point dummy;
+        for (unsigned int resp_i = 0; resp_i < n_responses; ++resp_i)
+        {
+          const Function & constraint_function(getFunctionByName(_response_constraints[resp_i]));
+          auto constraint = constraint_function.value(converted_prediction[resp_i], dummy);
+          constraints.push_back(constraint);
+        }
+
+        torch::Tensor constraint_tensor =
+            torch::from_blob(constraints.data(), {1, n_responses}, options).to(at::kDouble);
+
+        // Compute loss values using a MSE ( mean squared error)
+        torch::Tensor loss = torch::mse_loss(value_prediction, constraint_tensor);
+
+        // Propagate error back
+        loss.backward();
+
+        // Use new gradients to update the parameters
+        optimizer.step();
+
+        epoch_error = loss.item<double>();
+        _console << epoch_error << std::endl;
       }
 
-      torch::Tensor constraint_tensor =
-          torch::from_blob(constraints.data(), {1, n_responses}, options).to(at::kDouble);
+      _console << "Step: " << step_i << " (" << epoch_counter << ") | Loss: " << COLOR_GREEN
+               << epoch_error << COLOR_DEFAULT << std::endl;
 
-      // Compute loss values using a MSE ( mean squared error)
-      torch::Tensor loss = torch::mse_loss(value_prediction, constraint_tensor);
-
-      // Propagate error back
-      loss.backward();
-
-      // Use new gradients to update the parameters
-      optimizer.step();
-
-      epoch_error = loss.item<double>();
+      for (unsigned int resp_i = 0; resp_i < n_responses; ++resp_i)
+      {
+        start_vector[resp_i] = start_vector[resp_i + n_responses];
+        start_vector[resp_i + n_responses] = converted_prediction[resp_i];
+      }
+      input = torch::from_blob(start_vector.data(), {1, n_cols}, options).to(at::kDouble);
     }
-
-    _console << "Step: " << step_i << " (" << epoch_counter << ") | Loss: " << COLOR_GREEN
-             << epoch_error << COLOR_DEFAULT << std::endl;
-
-    for (unsigned int resp_i = 0; resp_i < n_responses; ++resp_i)
-    {
-      start_vector[resp_i] = start_vector[resp_i + n_responses];
-      start_vector[resp_i + n_responses] = converted_prediction[resp_i];
-    }
-    input = torch::from_blob(start_vector.data(), {1, n_cols}, options).to(at::kDouble);
   }
 
 #endif
