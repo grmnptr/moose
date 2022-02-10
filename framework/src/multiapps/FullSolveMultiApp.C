@@ -130,12 +130,5 @@ FullSolveMultiApp::solveStep(Real /*dt*/, Real /*target_time*/, bool auto_advanc
       last_solve_converged = false;
   }
 
-  // We attempt to restore the multiapp to its previous, backed-up state if
-  // it is required. If it isn't required, we keep the final state.
-  // To see instances where this might be needed, see the documentation of
-  // FixedPointSolve.
-  if (!getParam<bool>("no_backup_and_restore"))
-    restore();
-
   return last_solve_converged || _ignore_diverge;
 }
