@@ -78,6 +78,8 @@
     clone_master_mesh = true
     execute_on = 'timestep_begin'
 
+    keep_full_output_history = true
+
     transformed_postprocessors = 'from_main'
   []
 []
