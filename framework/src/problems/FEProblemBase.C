@@ -4395,7 +4395,8 @@ FEProblemBase::restoreFullSolveMultiApps(ExecFlagType type)
 
     for (const auto & multi_app : multi_apps)
     {
-      std::shared_ptr<FullSolveMultiApp> app_pointer = std::dynamic_pointer_cast<FullSolveMultiApp>(multi_app);
+      std::shared_ptr<FullSolveMultiApp> app_pointer =
+          std::dynamic_pointer_cast<FullSolveMultiApp>(multi_app);
       if (app_pointer)
         multi_app->restore();
     }
