@@ -69,7 +69,7 @@ FullSolveMultiApp::restore(bool /*force*/)
 }
 
 void
-FullSolveMultiApp::initialSetup(bool solved)
+FullSolveMultiApp::reinitialize(bool solved)
 {
   if (!solved)
     initialSetup();
