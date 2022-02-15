@@ -308,7 +308,7 @@ LibtorchSimpleNNControlTrainer::trainController()
         optimizer.step();
 
         epoch_error = loss.item<double>();
-        _console << epoch_error << std::endl;
+        // _console << epoch_error << std::endl;
       }
 
       _console << "Step: " << step_i << " (" << epoch_counter << ") | Loss: " << COLOR_GREEN
@@ -322,6 +322,8 @@ LibtorchSimpleNNControlTrainer::trainController()
       input = torch::from_blob(start_vector.data(), {1, n_cols}, options).to(at::kDouble);
     }
   }
+
+  torch::save(_control_nn, _control_nn->name());
 
 #endif
 }
