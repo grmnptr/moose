@@ -26,7 +26,7 @@
 
 [Variables]
   [T]
-    initial_condition = 300
+    initial_condition = 0
   []
 []
 
@@ -40,6 +40,12 @@
     type = BodyForce
     variable = T
     function = src_func
+    block = 1
+  []
+  [anti_source]
+    type = BodyForce
+    variable = T
+    value = 0
     block = 1
   []
   [time_deriv]
@@ -57,12 +63,6 @@
 []
 
 [BCs]
-#  [neumann_left]
-#    type = NeumannBC
-#    variable = T
-#    boundary = 'left'
-#    value = 0
-#  []
   [neumann_rest]
     type = NeumannBC
     variable = T
@@ -101,14 +101,14 @@
   []
 []
 
-# [Controls]
-#  [bd_control]
-#    type = LibtorchNeuralNetControl
-#    parameters = "BCs/neumann_left/value"
-#    postprocessors = "control_value"
-#    responses = 'T_min T_max'
-#  []
-#[]
+[Controls]
+  [bd_control]
+    type = LibtorchNeuralNetControl
+    parameters = "Kernels/anti_source/value"
+    postprocessors = "control_value"
+    responses = 'T_min T_max'
+  []
+[]
 
 [Reporters]
   [T_reporter]
