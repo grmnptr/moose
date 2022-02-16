@@ -1,7 +1,10 @@
+pi = 3.14159265359
+period = 0.25
+
 [Functions]
   [src_func]
     type = ParsedFunction
-    value = "2000*sin(20*t)"
+    value = "200*sin(${pi}/${period}*t)"
   []
 []
 
@@ -73,14 +76,13 @@
 
 [Executioner]
   type = Transient
-  num_steps = 10
-  dt = 0.01
-  solve_type = PJFNK
+  num_steps = 100
+  dt = 0.0025
+  solve_type = NEWTON
   petsc_options_iname = '-pc_type -pc_hypre_type'
   petsc_options_value = 'hypre boomeramg'
-  nl_rel_tol = 1e-6
-  l_abs_tol = 1e-6
   timestep_tolerance = 1e-6
+  line_search = 'none'
 []
 
 [Postprocessors]
@@ -102,7 +104,7 @@
 []
 
 [Controls]
-  [bd_control]
+  [src_control]
     type = LibtorchNeuralNetControl
     parameters = "Kernels/anti_source/value"
     postprocessors = "control_value"
