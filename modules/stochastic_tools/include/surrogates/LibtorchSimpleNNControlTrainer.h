@@ -80,11 +80,20 @@ private:
   /// The gathered response in a flattened form to be able to convert easily to torch::Tensor.
   std::vector<Real> _flattened_response;
 
-  /// Number of batches we want to prepare
-  unsigned int _no_batches;
+  /// Number of batches we want to prepare for the emulator
+  unsigned int _no_emulator_batches;
 
-  /// Number of epochs for the training
-  unsigned int _no_epocs;
+  /// Number of epochs for the training of the emulator
+  unsigned int _no_emulator_epocs;
+
+  /// Number of hidden layers in the emulator neural net
+  unsigned int & _no_emulator_hidden_layers;
+
+  /// Number of neurons within the hidden layers i nthe emulator neural net
+  std::vector<unsigned int> & _no_emulator_neurons_per_layer;
+
+  /// The learning rate for the optimization algorithm in the meulator
+  Real _emulator_learning_rate;
 
   /// Number of control epochs for the training
   unsigned int _no_control_epocs;
@@ -93,11 +102,13 @@ private:
   unsigned int _no_control_loops;
 
   /// Number of hidden layers in the neural net
-  unsigned int & _no_hidden_layers;
+  unsigned int & _no_control_hidden_layers;
 
-  /// Number of neurons within the hidden layers (the length of this vector
-  /// should be the same as _no_hidden_layers)
-  std::vector<unsigned int> & _no_neurons_per_layer;
+  /// Number of neurons within the hidden layers in the control neural net
+  std::vector<unsigned int> & _no_control_neurons_per_layer;
+
+  /// The control learning rate for the optimization algorithm
+  Real _control_learning_rate;
 
   /// Name of the pytorch output file. This is used for loading and storing
   /// already existing data.
@@ -108,17 +119,11 @@ private:
   /// MOOSE or python runs for retraining and further manipulation)
   bool _read_from_file;
 
-  /// The learning rate for the optimization algorithm
-  Real _learning_rate;
-
-  /// The control learning rate for the optimization algorithm
-  Real _control_learning_rate;
-
 #ifdef TORCH_ENABLED
-  /// Pointer to the neural net object (initialized as null)
+  /// Pointer to the emulator neural net object (initialized as null)
   std::shared_ptr<StochasticTools::LibtorchSimpleNeuralNet> & _control_nn;
 
-  /// Pointer to the neural net object (initialized as null)
+  /// Pointer to the controller neural net object (initialized as null)
   std::shared_ptr<StochasticTools::LibtorchSimpleNeuralNet> & _emulator_nn;
 #endif
 };

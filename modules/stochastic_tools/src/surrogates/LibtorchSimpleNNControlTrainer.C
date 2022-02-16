@@ -18,26 +18,29 @@ LibtorchSimpleNNControlTrainer::validParams()
 {
   InputParameters params = SurrogateTrainer::validParams();
 
-  params.addClassDescription("Trains a simple neural network using libtorch.");
+  params.addClassDescription("Trains a simple neural network controller using libtorch.");
 
   params.addRequiredParam<std::vector<ReporterName>>("response_reporter", "Response reporters.");
   params.addRequiredParam<std::vector<ReporterName>>("control_reporter", "Control reporters.");
   params.addRequiredParam<std::vector<FunctionName>>(
       "response_constraints", "Constraints on the postprocessor values in the reporters.");
 
-  params.addParam<unsigned int>("no_batches", 1, "Number of batches.");
-  params.addParam<unsigned int>("no_epocs", 1, "Number of epochs.");
+  params.addParam<unsigned int>("no_emulator_batches", 1, "Number of batches.");
+  params.addParam<unsigned int>("no_emulator_epocs", 1, "Number of epochs.");
   params.addParam<unsigned int>("no_control_epocs", 1, "Number of epochs for the control.");
   params.addParam<unsigned int>("no_control_loops", 1, "Number of loops for training the control.");
-  params.addParam<unsigned int>("no_hidden_layers", 0, "Number of hidden layers.");
+  params.addParam<unsigned int>("no_control_hidden_layers", 0, "Number of hidden layers.");
+  params.addParam<unsigned int>("no_emulator_hidden_layers", 0, "Number of hidden layers.");
   params.addParam<std::vector<unsigned int>>(
-      "no_neurons_per_layer", std::vector<unsigned int>(), "Number of neurons per layer.");
+      "no_emulator_neurons_per_layer", std::vector<unsigned int>(), "Number of neurons per layer.");
+  params.addParam<std::vector<unsigned int>>(
+      "no_control_neurons_per_layer", std::vector<unsigned int>(), "Number of neurons per layer.");
   params.addParam<std::string>(
       "filename", "net.pt", "Filename used to output the neural net parameters.");
   params.addParam<bool>("read_from_file",
                         false,
                         "Switch to allow reading old trained neural nets for further training.");
-  params.addParam<Real>("learning_rate", 0.001, "Learning rate (relaxation).");
+  params.addParam<Real>("emulator_learning_rate", 0.001, "Learning rate (relaxation).");
   params.addParam<Real>("control_learning_rate", 0.001, "Control learning rate (relaxation).");
 
   params.addParam<unsigned int>(
@@ -51,16 +54,20 @@ LibtorchSimpleNNControlTrainer::LibtorchSimpleNNControlTrainer(const InputParame
     _response_names(getParam<std::vector<ReporterName>>("response_reporter")),
     _response_constraints(getParam<std::vector<FunctionName>>("response_constraints")),
     _control_names(getParam<std::vector<ReporterName>>("control_reporter")),
-    _no_batches(getParam<unsigned int>("no_batches")),
-    _no_epocs(getParam<unsigned int>("no_epocs")),
+    _no_emulator_batches(getParam<unsigned int>("no_emulator_batches")),
+    _no_emulator_epocs(getParam<unsigned int>("no_emulator_epocs")),
+    _no_emulator_hidden_layers(declareModelData<unsigned int>("no_emulator_hidden_layers")),
+    _no_emulator_neurons_per_layer(
+        declareModelData<std::vector<unsigned int>>("no_emulator_neurons_per_layer")),
+    _emulator_learning_rate(getParam<Real>("emulator_learning_rate")),
     _no_control_epocs(getParam<unsigned int>("no_control_epocs")),
     _no_control_loops(getParam<unsigned int>("no_control_loops")),
-    _no_hidden_layers(declareModelData<unsigned int>("no_hidden_layers")),
-    _no_neurons_per_layer(declareModelData<std::vector<unsigned int>>("no_neurons_per_layer")),
+    _no_control_hidden_layers(declareModelData<unsigned int>("no_control_hidden_layers")),
+    _no_control_neurons_per_layer(
+        declareModelData<std::vector<unsigned int>>("no_control_neurons_per_layer")),
+    _control_learning_rate(getParam<Real>("control_learning_rate")),
     _filename(getParam<std::string>("filename")),
-    _read_from_file(getParam<bool>("read_from_file")),
-    _learning_rate(getParam<Real>("learning_rate")),
-    _control_learning_rate(getParam<Real>("control_learning_rate"))
+    _read_from_file(getParam<bool>("read_from_file"))
 #ifdef TORCH_ENABLED
     ,
     _control_nn(
@@ -69,8 +76,11 @@ LibtorchSimpleNNControlTrainer::LibtorchSimpleNNControlTrainer(const InputParame
         declareModelData<std::shared_ptr<StochasticTools::LibtorchSimpleNeuralNet>>("emulator_nn"))
 #endif
 {
-  if (_no_hidden_layers != _no_neurons_per_layer.size())
-    mooseError("The number of layers are not the same!");
+  if (_no_control_hidden_layers != _no_control_neurons_per_layer.size())
+    mooseError("The number of layers are not the same in the control neural net!");
+
+  if (_no_emulator_hidden_layers != _no_emulator_neurons_per_layer.size())
+    mooseError("The number of layers are not the same in the emulatr neural net!");
 
   if (_response_names.size() == 0)
     mooseError("The number of reponses reporters should be more than 0!");
@@ -82,20 +92,17 @@ LibtorchSimpleNNControlTrainer::LibtorchSimpleNNControlTrainer(const InputParame
     paramError("response_constraints",
                "The number of responses is not equal to the number of response constraints!");
 
-  _no_hidden_layers = getParam<unsigned int>("no_hidden_layers");
-  _no_neurons_per_layer = getParam<std::vector<unsigned int>>("no_neurons_per_layer");
-  _filename = getParam<std::string>("filename");
-
 #ifdef TORCH_ENABLED
   // Fixing the RNG seed to make sure every experiment is the same.
   // Otherwise sampling / stochastic gradient descent would be different.
   torch::manual_seed(getParam<unsigned int>("seed"));
 
+  // Initializing and saving the control neural net so that the control can grab it right away
   _control_nn =
       std::make_shared<StochasticTools::LibtorchSimpleNeuralNet>(_filename,
                                                                  2 * _response_names.size(),
-                                                                 _no_hidden_layers,
-                                                                 _no_neurons_per_layer,
+                                                                 _no_control_hidden_layers,
+                                                                 _no_control_neurons_per_layer,
                                                                  _control_names.size());
   torch::save(_control_nn, _control_nn->name());
 #endif
@@ -114,14 +121,18 @@ LibtorchSimpleNNControlTrainer::train()
 void
 LibtorchSimpleNNControlTrainer::postTrain()
 {
+  // We collect the results from the resporters
   auto no_steps = getReporterValueByName<std::vector<Real>>(_response_names[0]).size();
 
   unsigned int no_rows = no_steps - 1;
   unsigned int no_cols = 2 * _response_names.size() + _control_names.size();
   unsigned int no_responses = _response_names.size();
+
+  // Libtorch needs a 1Draw vector to be able to convert to torch::Tensors
   _flattened_data.resize(no_rows * no_cols);
   _flattened_response.resize(no_rows * _response_names.size());
 
+  // Fill the 1D containers with the reporters that contain the quantities of interest
   for (unsigned int rep_i = 0; rep_i < _response_names.size(); ++rep_i)
   {
     const std::vector<Real> & data =
@@ -138,6 +149,7 @@ LibtorchSimpleNNControlTrainer::postTrain()
     }
   }
 
+  // Fill the 1D containers with the reporters that contain the control values
   for (unsigned int rep_i = 0; rep_i < _control_names.size(); ++rep_i)
   {
     const std::vector<Real> & data =
@@ -149,7 +161,10 @@ LibtorchSimpleNNControlTrainer::postTrain()
   _communicator.allgather(_flattened_data);
   _communicator.allgather(_flattened_response);
 
+  // We train the emulator to be able to emulate the system response
   trainEmulator();
+
+  // We train the controller using the emulator to get a good control strategy
   trainController();
 }
 
@@ -159,7 +174,7 @@ LibtorchSimpleNNControlTrainer::trainEmulator()
 
 #ifdef TORCH_ENABLED
 
-  // Then, we create and load our Tensors
+  // This gets us the number of timesteps
   auto no_steps = getReporterValueByName<std::vector<Real>>(_response_names[0]).size();
 
   unsigned int n_rows = no_steps - 1;
@@ -179,33 +194,22 @@ LibtorchSimpleNNControlTrainer::trainEmulator()
   MyData my_data(data_tensor, response_tensor);
 
   // We initialize a data_loader for the training part.
-  unsigned int sample_per_batch = n_rows > _no_batches ? n_rows / _no_batches : 1;
+  unsigned int sample_per_batch = n_rows > _no_emulator_batches ? n_rows / _no_emulator_batches : 1;
 
   auto data_set = my_data.map(torch::data::transforms::Stack<>());
   auto data_loader = torch::data::make_data_loader<torch::data::samplers::SequentialSampler>(
       std::move(data_set), sample_per_batch);
 
-  // We create a neural net (for the definition of the net see the header file)
+  // We create a neural net
   _emulator_nn = std::make_shared<StochasticTools::LibtorchSimpleNeuralNet>(
-      _filename, n_cols, _no_hidden_layers, _no_neurons_per_layer, n_responses);
+      _filename, n_cols, _no_emulator_hidden_layers, _no_emulator_neurons_per_layer, n_responses);
 
   // Initialize the optimizer
   torch::optim::Adam optimizer(_emulator_nn->parameters(),
-                               torch::optim::AdamOptions(_learning_rate));
-
-  if (_read_from_file)
-    try
-    {
-      torch::load(_emulator_nn, _filename);
-      _console << "Loaded requested .pt file." << std::endl;
-    }
-    catch (...)
-    {
-      mooseError("The requested pytorch file could not be loaded.");
-    }
+                               torch::optim::AdamOptions(_emulator_learning_rate));
 
   // Begin training loop
-  for (size_t epoch = 1; epoch <= _no_epocs; ++epoch)
+  for (size_t epoch = 1; epoch <= _no_emulator_epocs; ++epoch)
   {
     Real epoch_error = 0.0;
     for (auto & batch : *data_loader)
@@ -228,7 +232,7 @@ LibtorchSimpleNNControlTrainer::trainEmulator()
       epoch_error += loss.item<double>();
     }
 
-    epoch_error = epoch_error / _no_batches;
+    epoch_error = epoch_error / _no_emulator_batches;
 
     if (epoch % 10 == 0)
       _console << "Epoch: " << epoch << " | Loss: " << COLOR_GREEN << epoch_error << COLOR_DEFAULT
@@ -244,48 +248,59 @@ LibtorchSimpleNNControlTrainer::trainController()
 
 #ifdef TORCH_ENABLED
 
-  // Then, we create and load our Tensors
+  // We get the number of time steps
   auto no_steps = getReporterValueByName<std::vector<Real>>(_response_names[0]).size();
+
   unsigned int n_cols = 2 * _response_names.size();
   unsigned int n_responses = _response_names.size();
   unsigned int n_controls = _control_names.size();
 
-  // We create a neural net (for the definition of the net see the header file)
+  // We create the controller neural net
   _control_nn = std::make_shared<StochasticTools::LibtorchSimpleNeuralNet>(
-      _filename, n_cols, _no_hidden_layers, _no_neurons_per_layer, n_controls);
+      _filename, n_cols, _no_control_hidden_layers, _no_control_neurons_per_layer, n_controls);
 
   // Initialize the optimizer
   torch::optim::Adam optimizer(_control_nn->parameters(),
                                torch::optim::AdamOptions(_control_learning_rate));
 
+  // We initialize the starting vector for the sweeps
   std::vector<Real> start_vector(&_flattened_data[0], &_flattened_data[n_cols]);
   auto options = torch::TensorOptions().dtype(at::kDouble);
   torch::Tensor input = torch::from_blob(start_vector.data(), {1, n_cols}, options).to(at::kDouble);
 
-  // Begin training loop
+  // Begin controller training loop
   for (unsigned int loop_i = 0; loop_i < _no_control_loops; ++loop_i)
   {
+    // We loop through the timesteps simulating the system using the emulator
+    // neural net
     for (unsigned int step_i = 1; step_i <= no_steps - 1; ++step_i)
     {
       Real epoch_error = 100.0;
       unsigned int epoch_counter = 0;
       std::vector<Real> converted_prediction;
 
+      // We iterate in each timestep until we get a good neural net control
       while (epoch_counter < _no_control_epocs && epoch_error > 1e-6)
       {
         epoch_counter += 1;
 
         optimizer.zero_grad();
 
+        // We predict the controller values based on the previous two timesteps
         torch::Tensor control_prediction = _control_nn->forward(input);
 
+        // We add the controller values to the input vectors
         torch::Tensor extended_input = torch::cat({input, control_prediction}, -1).to(at::kDouble);
 
+        // We use the emulator to predict the values of the quantities interest in the
+        // next timestep
         torch::Tensor value_prediction = _emulator_nn->forward(extended_input);
 
         converted_prediction =
             std::vector<Real>({value_prediction.data_ptr<Real>(),
                                value_prediction.data_ptr<Real>() + value_prediction.size(1)});
+
+        // Evaluate the contraints for each response
         std::vector<Real> constraints;
         Point dummy;
         for (unsigned int resp_i = 0; resp_i < n_responses; ++resp_i)
@@ -295,6 +310,7 @@ LibtorchSimpleNNControlTrainer::trainController()
           constraints.push_back(constraint);
         }
 
+        // Build the constraint tensor for the loss calculation
         torch::Tensor constraint_tensor =
             torch::from_blob(constraints.data(), {1, n_responses}, options).to(at::kDouble);
 
@@ -308,12 +324,12 @@ LibtorchSimpleNNControlTrainer::trainController()
         optimizer.step();
 
         epoch_error = loss.item<double>();
-        // _console << epoch_error << std::endl;
       }
 
-      _console << "Step: " << step_i << " (" << epoch_counter << ") | Loss: " << COLOR_GREEN
+      _console << "Controller training step: " << step_i << " (" << epoch_counter << ") | Loss: " << COLOR_GREEN
                << epoch_error << COLOR_DEFAULT << std::endl;
 
+      // Build a new input tensor using the outputs
       for (unsigned int resp_i = 0; resp_i < n_responses; ++resp_i)
       {
         start_vector[resp_i] = start_vector[resp_i + n_responses];
@@ -323,6 +339,7 @@ LibtorchSimpleNNControlTrainer::trainController()
     }
   }
 
+  // Save the controller neural net so our controller can read it
   torch::save(_control_nn, _control_nn->name());
 
 #endif
