@@ -62,9 +62,9 @@ LibtorchSimpleNNControlTrainer::LibtorchSimpleNNControlTrainer(const InputParame
     _emulator_learning_rate(getParam<Real>("emulator_learning_rate")),
     _no_control_epocs(getParam<unsigned int>("no_control_epocs")),
     _no_control_loops(getParam<unsigned int>("no_control_loops")),
-    _no_control_hidden_layers(declareModelData<unsigned int>("no_control_hidden_layers")),
+    _no_control_hidden_layers(getParam<unsigned int>("no_control_hidden_layers")),
     _no_control_neurons_per_layer(
-        declareModelData<std::vector<unsigned int>>("no_control_neurons_per_layer")),
+        getParam<std::vector<unsigned int>>("no_control_neurons_per_layer")),
     _control_learning_rate(getParam<Real>("control_learning_rate")),
     _filename(getParam<std::string>("filename")),
     _read_from_file(getParam<bool>("read_from_file"))
@@ -326,8 +326,8 @@ LibtorchSimpleNNControlTrainer::trainController()
         epoch_error = loss.item<double>();
       }
 
-      _console << "Controller training step: " << step_i << " (" << epoch_counter << ") | Loss: " << COLOR_GREEN
-               << epoch_error << COLOR_DEFAULT << std::endl;
+      _console << "Controller training step: " << step_i << " (" << epoch_counter
+               << ") | Loss: " << COLOR_GREEN << epoch_error << COLOR_DEFAULT << std::endl;
 
       // Build a new input tensor using the outputs
       for (unsigned int resp_i = 0; resp_i < n_responses; ++resp_i)

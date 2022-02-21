@@ -102,10 +102,10 @@ private:
   unsigned int _no_control_loops;
 
   /// Number of hidden layers in the neural net
-  unsigned int & _no_control_hidden_layers;
+  const unsigned int & _no_control_hidden_layers;
 
   /// Number of neurons within the hidden layers in the control neural net
-  std::vector<unsigned int> & _no_control_neurons_per_layer;
+  const std::vector<unsigned int> & _no_control_neurons_per_layer;
 
   /// The control learning rate for the optimization algorithm
   Real _control_learning_rate;
