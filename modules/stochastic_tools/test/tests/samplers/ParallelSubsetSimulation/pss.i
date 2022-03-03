@@ -22,7 +22,6 @@
     inputs_reporter = 'adaptive_MC/inputs'
     num_samplessub = 20
     use_absolute_value = true
-    num_parallel_chains = 2
     seed = 1012
   []
 []
@@ -55,7 +54,6 @@
 [Reporters]
   [constant]
     type = StochasticReporter
-    outputs = none
   []
   [adaptive_MC]
     type = AdaptiveMonteCarloDecision

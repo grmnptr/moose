@@ -11,6 +11,7 @@
 #include "RayTracing.h"
 #include "LineSegment.h"
 #include "libmesh/utility.h"
+#include "MooseUtils.h"
 
 #include <fstream>
 
@@ -29,22 +30,22 @@ PorousFlowLineGeometry::validParams()
       "just one point, you must also specify the line_length and line_direction parameters.  Note "
       "that you will get segementation faults if your points do not lie within your mesh!");
   params.addParam<ReporterName>(
-      "x_coord_reporter",
+      "x_coord_name",
       "reporter x-coordinate name of line sink.  This uses the reporter syntax <reporter>/<name>.  "
       "Each point must adhere to the same requirements as those that would be given if using "
       "point_file ");
   params.addParam<ReporterName>(
-      "y_coord_reporter",
+      "y_coord_name",
       "reporter y-coordinate name of line sink.  This uses the reporter syntax <reporter>/<name>.  "
       "Each point must adhere to the same requirements as those that would be given if using "
       "point_file ");
   params.addParam<ReporterName>(
-      "z_coord_reporter",
+      "z_coord_name",
       "reporter z-coordinate name of line sink.  This uses the reporter syntax <reporter>/<name>.  "
       "Each point must adhere to the same requirements as those that would be given if using "
       "point_file ");
   params.addParam<ReporterName>(
-      "weight_reporter",
+      "weight_name",
       "reporter weight name of line sink. This uses the reporter syntax <reporter>/<name>.  "
       "Each point must adhere to the same requirements as those that would be given if using "
       "point_file ");
@@ -61,6 +62,10 @@ PorousFlowLineGeometry::validParams()
       "line_base",
       "Line base point x,y,z coordinates.  This is the same format as a single-line point_file. "
       "Note this is only used if there is no point file specified.");
+  params.addParam<Real>("projection_tolerance",
+                        libMesh::TOLERANCE,
+                        "Search tolerance between point and the closest node.  If a node is not "
+                        "found, an error will be produced");
   params.addClassDescription("Approximates a polyline sink in the mesh using a number of Dirac "
                              "point sinks with given weightings that are read from a file");
   return params;
@@ -72,23 +77,24 @@ PorousFlowLineGeometry::PorousFlowLineGeometry(const InputParameters & parameter
     _line_length(getParam<Real>("line_length")),
     _line_direction(getParam<RealVectorValue>("line_direction")),
     _point_file(getParam<std::string>("point_file")),
-    _x_coord(isParamValid("x_coord_reporter") ? &getReporterValue<std::vector<Real>>(
-                                                    "x_coord_reporter", REPORTER_MODE_REPLICATED)
-                                              : &_xs),
-    _y_coord(isParamValid("y_coord_reporter") ? &getReporterValue<std::vector<Real>>(
-                                                    "y_coord_reporter", REPORTER_MODE_REPLICATED)
-                                              : &_ys),
-    _z_coord(isParamValid("z_coord_reporter") ? &getReporterValue<std::vector<Real>>(
-                                                    "z_coord_reporter", REPORTER_MODE_REPLICATED)
-                                              : &_zs),
-    _weight(isParamValid("weight_reporter")
-                ? &getReporterValue<std::vector<Real>>("weight_reporter", REPORTER_MODE_REPLICATED)
+    _x_coord(isParamValid("x_coord_name")
+                 ? &getReporterValue<std::vector<Real>>("x_coord_name", REPORTER_MODE_REPLICATED)
+                 : &_xs),
+    _y_coord(isParamValid("y_coord_name")
+                 ? &getReporterValue<std::vector<Real>>("y_coord_name", REPORTER_MODE_REPLICATED)
+                 : &_ys),
+    _z_coord(isParamValid("z_coord_name")
+                 ? &getReporterValue<std::vector<Real>>("z_coord_name", REPORTER_MODE_REPLICATED)
+                 : &_zs),
+    _weight(isParamValid("weight_name")
+                ? &getReporterValue<std::vector<Real>>("weight_name", REPORTER_MODE_REPLICATED)
                 : &_rs),
-    _usingReporter(isParamValid("x_coord_reporter"))
+    _usingReporter(isParamValid("x_coord_name")),
+    _tolerance(getParam<Real>("projection_tolerance"))
 {
   statefulPropertiesAllowed(true);
 
-  const int checkInputFormat =
+  int checkInputFormat =
       int(isParamValid("line_base")) + int(!_point_file.empty()) + int(_usingReporter);
 
   if (checkInputFormat > 1)
@@ -153,12 +159,53 @@ PorousFlowLineGeometry::initialSetup()
       mooseError(errMsg);
     }
 
+    /// Begin Lynn's code ///
+    // MooseMesh & mesh = _subproblem.mesh();
+    // Point pt(_x_coord->at(0), _y_coord->at(0), _z_coord->at(0));
+    // Point pmax(_x_coord->at(0) + _tolerance, _y_coord->at(0) + _tolerance, _z_coord->at(0) + _tolerance);
+    // Point pmin(_x_coord->at(0) - _tolerance, _y_coord->at(0) - _tolerance, _z_coord->at(0) - _tolerance);
+    // BoundingBox bbox(pmin, pmax);
+    // Point closest_node;
+    // Real nearest_distance = std::numeric_limits<Real>::max();
+    // for (const auto & node : mesh.getMesh().node_ptr_range())
+    // {
+    //   if (bbox.contains_point(*node))
+    //   {
+    //     Real distance = (pt - *node).norm();
+    //     if (distance < nearest_distance)
+    //     {
+    //       nearest_distance = distance;
+    //       closest_node = *node;
+    //     }
+    //   }
+    // }
+    // if (nearest_distance < _tolerance)
+    // {
+    //   std::cout << "Here 1 ****** " << Moose::stringify(closest_node) << std::endl;
+    //   _rs.push_back(_weight->at(0));
+    //   _xs.push_back(closest_node(0));
+    //   _ys.push_back(closest_node(1));
+    //   _zs.push_back(closest_node(2));
+    // }
+    // else
+    // {
+    //   std::ostringstream errMsg;
+    //   errMsg << "No nodes located within projection_tolerance= " << _tolerance
+    //          << " of reporter point " << pt;
+    //   mooseError(errMsg.str());
+    // }
+    /// End Lynn's code ///
+
     for (std::size_t i = 0; i < _x_coord->size(); ++i)
     {
-      _rs.push_back(_weight->at(i));
-      _xs.push_back(_x_coord->at(i));
-      _ys.push_back(_y_coord->at(i));
-      _zs.push_back(_z_coord->at(i));
+      // _rs.push_back(_weight->at(i));
+      // _xs.push_back(_x_coord->at(i));
+      // _ys.push_back(_y_coord->at(i));
+      // _zs.push_back(_z_coord->at(i));
+      _rs.push_back((*_weight)[i]);
+      _xs.push_back((*_x_coord)[i]);
+      _ys.push_back((*_y_coord)[i]);
+      _zs.push_back((*_z_coord)[i]);
     }
     calcLineLengths();
   }
@@ -208,6 +255,8 @@ PorousFlowLineGeometry::calcLineLengths()
   _bottom_point(0) = _xs[num_pts - 1];
   _bottom_point(1) = _ys[num_pts - 1];
   _bottom_point(2) = _zs[num_pts - 1];
+
+  // std::cout << "Here 1 ****** " << Moose::stringify(_bottom_point) << std::endl;
 
   // construct the line-segment lengths between each point
   _half_seg_len.clear();
@@ -278,6 +327,7 @@ PorousFlowLineGeometry::regenPoints()
     _ys.back() = p1(1);
     _zs.back() = p1(2);
   }
+  _weight = &_rs;
   calcLineLengths();
 }
 
@@ -313,9 +363,57 @@ PorousFlowLineGeometry::parseNextLineReals(std::ifstream & ifs, std::vector<Real
 void
 PorousFlowLineGeometry::addPoints()
 {
-  // Add point using the unique ID "i", let the DiracKernel take
-  // care of the caching.  This should be fast after the first call,
-  // as long as the points don't move around.
+  /// Begin Lynn's code ///
   for (unsigned int i = 0; i < _x_coord->size(); i++)
-    addPoint(Point(_x_coord->at(i), _y_coord->at(i), _z_coord->at(i)), i);
+  {
+    Real xr;
+    Real yr;
+    Real zr;
+    MooseMesh & mesh = _subproblem.mesh();
+    Point pt(_x_coord->at(i), _y_coord->at(i), _z_coord->at(i));
+    Point pmax(_x_coord->at(i) + _tolerance, _y_coord->at(i) + _tolerance, _z_coord->at(i) + _tolerance);
+    Point pmin(_x_coord->at(i) - _tolerance, _y_coord->at(i) - _tolerance, _z_coord->at(i) - _tolerance);
+    BoundingBox bbox(pmin, pmax);
+    Point closest_node;
+    Real nearest_distance = std::numeric_limits<Real>::max();
+    for (const auto & node : mesh.getMesh().node_ptr_range())
+    {
+      if (bbox.contains_point(*node))
+      {
+        Real distance = (pt - *node).norm();
+        if (distance < nearest_distance)
+        {
+          nearest_distance = distance;
+          closest_node = *node;
+        }
+      }
+    }
+    if (nearest_distance < _tolerance)
+    {
+      // std::cout << "Here 1 ****** " << Moose::stringify(closest_node) << std::endl;
+      // _rs.push_back(_weight->at(0));
+      // _xs.push_back(closest_node(0));
+      // _ys.push_back(closest_node(1));
+      // _zs.push_back(closest_node(2));
+      xr = closest_node(0);
+      yr = closest_node(1);
+      zr = closest_node(2);
+    }
+    else
+    {
+      std::ostringstream errMsg;
+      errMsg << "No nodes located within projection_tolerance= " << _tolerance
+             << " of reporter point " << pt;
+      mooseError(errMsg.str());
+    }
+    addPoint(Point(xr, yr, zr), i);
+  }
+  /// End Lynn's code ///
+
+  // std::cout << "Here 1 ****** " << _x_coord->at(0) << " " << _y_coord->at(0) << " " << _z_coord->at(0) << std::endl;
+  // // Add point using the unique ID "i", let the DiracKernel take
+  // // care of the caching.  This should be fast after the first call,
+  // // as long as the points don't move around.
+  // for (unsigned int i = 0; i < _x_coord->size(); i++)
+  //   addPoint(Point(_x_coord->at(i), _y_coord->at(i), _z_coord->at(i)), i);
 }
