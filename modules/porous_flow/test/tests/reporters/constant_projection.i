@@ -1,8 +1,8 @@
 [Mesh]
   type = GeneratedMesh
   dim = 2
-  nx = 99
-  ny = 99
+  nx = 999
+  ny = 999
   elem_type = QUAD4
 []
 
