@@ -117,53 +117,6 @@ AL_ADAM::SetupData(const std::vector<std::vector<Real>> & inputs, const std::vec
   }
 }
 
-// void
-// AL_ADAM::Train()
-// {
-//   SetupData(_inputs_sto, _outputs_sto);
-//   for (unsigned int ii = 0; ii < _training_params.rows(); ++ii)
-//   {
-//     for (unsigned int jj = 0; jj < _training_params.cols(); ++jj)
-//       gatherSum(_training_params(ii, jj));
-//     gatherSum(_training_data(ii, 0));
-//   }
-//
-//   // Standardize (center and scale) training params
-//   if (_standardize_params)
-//   {
-//     _param_standardizer.computeSet(_training_params);
-//     _param_standardizer.getStandardized(_training_params);
-//   }
-//   // if not standardizing data set mean=0, std=1 for use in surrogate
-//   else
-//     _param_standardizer.set(0, 1, _sampler.getNumberOfCols());
-//
-//   // Standardize (center and scale) training data
-//   if (_standardize_data)
-//   {
-//     _data_standardizer.computeSet(_training_data);
-//     _data_standardizer.getStandardized(_training_data);
-//   }
-//   // if not standardizing data set mean=0, std=1 for use in surrogate
-//   else
-//     _param_standardizer.set(0, 1, _sampler.getNumberOfCols());
-//
-//   _K.resize(_training_params.rows(), _training_params.rows());
-//
-//   // std::cout << Moose::stringify(_training_params) << std::endl;
-//   // std::cout << Moose::stringify(_training_data) << std::endl;
-//
-//   if (_do_tuning)
-//     if (hyperparamTuning())
-//       mooseError("PETSc/TAO error in hyperparameter tuning.");
-//
-//   _covariance_function->computeCovarianceMatrix(_K, _training_params, _training_params, true);
-//   _K_cho_decomp = _K.llt();
-//   _K_results_solve = _K_cho_decomp.solve(_training_data);
-//
-//   _covariance_function->buildHyperParamMap(_hyperparam_map, _hyperparam_vec_map);
-// }
-
 void
 AL_ADAM::Train_ADAM(const unsigned int & iters)
 {
@@ -354,150 +307,6 @@ AL_ADAM::getGradient()
   return grad_vec;
 }
 
-// PetscErrorCode
-// AL_ADAM::hyperparamTuning()
-// {
-//   PetscErrorCode ierr;
-//   Tao tao;
-//   AL_ADAM * GP_ptr = this;
-//
-//   // Setup Tao optimization problem
-//   ierr = TaoCreate(_tao_comm.get(), &tao);
-//   CHKERRQ(ierr);
-//   ierr = PetscOptionsSetValue(NULL, "-tao_type", "bncg");
-//   CHKERRQ(ierr);
-//   ierr = PetscOptionsInsertString(NULL, _tao_options.c_str());
-//   CHKERRQ(ierr);
-//   ierr = TaoSetFromOptions(tao);
-//   CHKERRQ(ierr);
-//
-//   // Define petsc vetor to hold tunalbe hyper-params
-//   libMesh::PetscVector<Number> theta(_tao_comm, _num_tunable);
-//   ierr = AL_ADAM::FormInitialGuess(GP_ptr, theta.vec());
-//   CHKERRQ(ierr);
-//   ierr = TaoSetInitialVector(tao, theta.vec());
-//   CHKERRQ(ierr);
-//
-//   // Get Hyperparameter bounds.
-//   libMesh::PetscVector<Number> lower(_tao_comm, _num_tunable);
-//   libMesh::PetscVector<Number> upper(_tao_comm, _num_tunable);
-//   buildHyperParamBounds(lower, upper);
-//   CHKERRQ(ierr);
-//   ierr = TaoSetVariableBounds(tao, lower.vec(), upper.vec());
-//   CHKERRQ(ierr);
-//
-//   // Set Objective and Graident Callback
-//   ierr = TaoSetObjectiveAndGradientRoutine(
-//       tao, AL_ADAM::FormFunctionGradientWrapper, (void *)this);
-//   CHKERRQ(ierr);
-//
-//   // Solve
-//   ierr = TaoSolve(tao);
-//   CHKERRQ(ierr);
-//   //
-//   if (_show_tao)
-//   {
-//     ierr = TaoView(tao, PETSC_VIEWER_STDOUT_WORLD);
-//     theta.print();
-//   }
-//
-//   _covariance_function->loadHyperParamMap(_hyperparam_map, _hyperparam_vec_map);
-//
-//   ierr = TaoDestroy(&tao);
-//   CHKERRQ(ierr);
-//
-//   return 0;
-// }
-//
-// PetscErrorCode
-// AL_ADAM::FormInitialGuess(AL_ADAM * GP_ptr, Vec theta_vec)
-// {
-//   libMesh::PetscVector<Number> theta(theta_vec, GP_ptr->_tao_comm);
-//   _covariance_function->buildHyperParamMap(_hyperparam_map, _hyperparam_vec_map);
-//   mapToVec(theta);
-//   return 0;
-// }
-//
-// PetscErrorCode
-// AL_ADAM::FormFunctionGradientWrapper(
-//     Tao tao, Vec theta_vec, PetscReal * f, Vec grad_vec, void * ptr)
-// {
-//   AL_ADAM * GP_ptr = (AL_ADAM *)ptr;
-//   GP_ptr->FormFunctionGradient(tao, theta_vec, f, grad_vec);
-//   return 0;
-// }
-//
-// void
-// AL_ADAM::FormFunctionGradient(Tao /*tao*/,
-//                                              Vec theta_vec,
-//                                              PetscReal * f,
-//                                              Vec grad_vec)
-// {
-//   libMesh::PetscVector<Number> theta(theta_vec, _tao_comm);
-//   libMesh::PetscVector<Number> grad(grad_vec, _tao_comm);
-//
-//   vecToMap(theta);
-//   // std::cout << theta(0) << std::endl;
-//   _covariance_function->loadHyperParamMap(_hyperparam_map, _hyperparam_vec_map);
-//   _covariance_function->computeCovarianceMatrix(_K, _training_params, _training_params, true);
-//   _K_cho_decomp = _K.llt();
-//   _K_results_solve = _K_cho_decomp.solve(_training_data);
-//
-//   // testing auto tuning
-//   RealEigenMatrix dKdhp(_training_params.rows(), _training_params.rows());
-//   RealEigenMatrix alpha = _K_results_solve * _K_results_solve.transpose();
-//   for (auto iter = _tuning_data.begin(); iter != _tuning_data.end(); ++iter)
-//   {
-//     std::string hyper_param_name = iter->first;
-//     for (unsigned int ii = 0; ii < std::get<1>(iter->second); ++ii)
-//     {
-//       _covariance_function->computedKdhyper(dKdhp, _training_params, hyper_param_name, ii);
-//       RealEigenMatrix tmp = alpha * dKdhp - _K_cho_decomp.solve(dKdhp);
-//       Real grad1 = -tmp.trace() / 2.0;
-//       if (hyper_param_name.compare("length_factor") == 0)
-//       {
-//         grad1 += -(std::log(_covariance_function->getLengthFactor()[ii])-0.0) * 1/_covariance_function->getLengthFactor()[ii];
-//       } else
-//       {
-//         grad1 += -(std::log(_covariance_function->getSignalVariance())-0.0) * 1/_covariance_function->getSignalVariance();
-//       }
-//       // std::cout << hyper_param_name << std::endl;
-//       grad.set(std::get<0>(iter->second) + ii, grad1);
-//     }
-//   }
-//
-//   // std::cout << _covariance_function->getSignalVariance() << std::endl;
-//   // std::cout << Moose::stringify(_covariance_function->getLengthFactor()) << std::endl;
-//   Real log_likelihood = 0;
-//   log_likelihood += -(_training_data.transpose() * _K_results_solve)(0, 0);
-//   log_likelihood += -std::log(_K.determinant());
-//
-//   log_likelihood += -std::pow(((std::log(_covariance_function->getSignalVariance()) - 0.0) / 1.0) , 2);
-//   std::vector<Real> len1;
-//   len1 = _covariance_function->getLengthFactor();
-//   for (unsigned int ii = 0; ii < len1.size(); ++ii)
-//     log_likelihood += -std::pow(((std::log(len1[ii]) - 0.0) / 1.0) , 2);
-//
-//   // log_likelihood += -_training_data.rows() * std::log(2 * M_PI);
-//   log_likelihood = -log_likelihood / 2;
-//   // std::cout << log_likelihood << std::endl;
-//   *f = log_likelihood;
-// }
-
-// void
-// AL_ADAM::buildHyperParamBounds(libMesh::PetscVector<Number> & theta_l,
-//                                               libMesh::PetscVector<Number> & theta_u) const
-// {
-//   for (auto iter = _tuning_data.begin(); iter != _tuning_data.end(); ++iter)
-//   {
-//     for (unsigned int ii = 0; ii < std::get<1>(iter->second); ++ii)
-//     {
-//       theta_l.set(std::get<0>(iter->second) + ii, std::get<2>(iter->second));
-//       theta_u.set(std::get<0>(iter->second) + ii, std::get<3>(iter->second));
-//     }
-//   }
-// }
-
 void
 AL_ADAM::mapToVec(libMesh::PetscVector<Number> & theta) const
 {
@@ -537,45 +346,6 @@ AL_ADAM::vecToMap(libMesh::PetscVector<Number> & theta)
     }
   }
 }
-
-// std::vector<Real>
-// AL_ADAM::Predict(const std::vector<Real> & inputs)
-// {
-//   RealEigenMatrix test_points(1, inputs.size());
-//   for (unsigned int ii = 0; ii < inputs.size(); ++ii)
-//     test_points(0, ii) = inputs[ii];
-//
-//   _param_standardizer.getStandardized(test_points);
-//
-//   // std::cout << Moose::stringify(test_points) << std::endl;
-//
-//   RealEigenMatrix K_train_test(_training_params.rows(), test_points.rows());
-//   _covariance_function->computeCovarianceMatrix(K_train_test, _training_params, test_points, false);
-//   RealEigenMatrix K_test(test_points.rows(), test_points.rows());
-//   _covariance_function->computeCovarianceMatrix(K_test, test_points, test_points, true);
-//
-//   // Compute the predicted mean value (centered)
-//   RealEigenMatrix pred_value = (K_train_test.transpose() * _K_results_solve);
-//   // std::cout << Moose::stringify(pred_value) << std::endl;
-//   // De-center/scale the value and store for return
-//   _data_standardizer.getDestandardized(pred_value);
-//
-//   RealEigenMatrix pred_var =
-//       K_test - (K_train_test.transpose() * _K_cho_decomp.solve(K_train_test));
-//
-//   // Vairance computed, take sqrt for standard deviation, scale up by training data std and store
-//   RealEigenMatrix std_dev_mat = pred_var.array().sqrt();
-//   // std::cout << Moose::stringify(std_dev_mat) << std::endl;
-//   _data_standardizer.getDescaled(std_dev_mat);
-//   // std_dev = std_dev_mat(0, 0);
-//
-//   std::vector<Real> result;
-//   result.resize(2);
-//   result[0] = pred_value(0, 0);
-//   result[1] = std_dev_mat(0, 0);
-//
-//   return result;
-// }
 
 std::vector<Real>
 AL_ADAM::Predict_ADAM(const std::vector<Real> & inputs)
@@ -637,85 +407,6 @@ AL_ADAM::Predict_ADAM(const std::vector<Real> & inputs)
   return result;
 }
 
-// bool
-// AL_ADAM::needSample(const std::vector<Real> & row,
-//                                               dof_id_type,
-//                                               dof_id_type,
-//                                               Real & val)
-// {
-//   int N = 13;
-//   if (_step < N)
-//   {
-//     if (_step > 1)
-//     {
-//       _outputs_sto.push_back(_output_value[0]);
-//       for (unsigned int k = 0; k < _inputs_sto.size(); ++k)
-//         _inputs_sto[k].push_back(row[k]); // _inputs_prev[k]
-//     }
-//     // std::cout << "Inputs 1 " << Moose::stringify(_inputs_sto[0]) << std::endl;
-//     // std::cout << "Inputs 2 " << Moose::stringify(_inputs_sto[1]) << std::endl;
-//     // std::cout << "Outputs " << Moose::stringify(_outputs_sto) << std::endl;
-//     _decision = true;
-//   } else if (_step == N)
-//   {
-//     _outputs_sto.push_back(_output_value[0]);
-//     for (unsigned int k = 0; k < _inputs_sto.size(); ++k)
-//       _inputs_sto[k].push_back(row[k]); // _inputs_prev[k]
-//     // Train();
-//     // std::cout << Moose::stringify(_inputs_sto) << std::endl;
-//     // std::cout << Moose::stringify(_outputs_sto) << std::endl;
-//     Train_ADAM(10000);
-//     // std::cout << Moose::stringify(row) << std::endl;
-//
-//     std::vector<Real> result = Predict_ADAM(row);
-//     std::cout << Moose::stringify(result) << std::endl;
-//     _decision = false;
-//     val = result[0];
-//     // if (std::abs(result[0]-0.9)/result[1] > 2.0)
-//     // {
-//     //   _decision = false;
-//     //   val = result[0];
-//     // } else
-//     //   _decision = true;
-//   } else
-//   {
-//
-//     std::vector<Real> result = Predict_ADAM(row);
-//     std::cout << Moose::stringify(result) << std::endl;
-//     Real U_val;
-//     U_val = std::abs(result[0]-0.9)/result[1];
-//     std::cout << "U function " << U_val << std::endl;
-//     if (U_val > 2.0)
-//     {
-//       std::cout << "Here" << std::endl;
-//       _decision = false;
-//       val = result[0];
-//     } else
-//       _decision = true;
-//
-//
-//     // if (_decision == true)
-//     // {
-//     //   _outputs_sto.push_back(_output_value[0]);
-//     //   for (unsigned int k = 0; k < _inputs_sto.size(); ++k)
-//     //     _inputs_sto[k].push_back(row[k]); // _inputs_prev[k]
-//     //   Train_ADAM(1000);
-//     // }
-//     // std::vector<Real> result = Predict_ADAM(row);
-//     // Real U_val;
-//     // U_val = std::abs(result[0]-0.9)/result[1];
-//     // std::cout << "U function " << U_val << std::endl;
-//     // if (U_val > 2.0)
-//     // {
-//     //   _decision = false;
-//     //   val = result[0];
-//     // } else
-//     //   _decision = true;
-//   }
-//   _inputs_prev = row;
-//   return _decision;
-// }
-
 bool
 AL_ADAM::needSample(const std::vector<Real> & row,
                                               dof_id_type,
@@ -742,8 +433,8 @@ AL_ADAM::needSample(const std::vector<Real> & row,
     for (unsigned int k = 0; k < _inputs_sto.size(); ++k)
       _inputs_sto[k].push_back(row[k]); // _inputs_prev[k]
     // Train();
-    std::cout << Moose::stringify(_inputs_sto) << std::endl;
-    std::cout << Moose::stringify(_outputs_sto) << std::endl;
+    // std::cout << Moose::stringify(_inputs_sto) << std::endl;
+    // std::cout << Moose::stringify(_outputs_sto) << std::endl;
     Train_ADAM(10000);
     // std::cout << Moose::stringify(row) << std::endl;
 
@@ -775,13 +466,13 @@ AL_ADAM::needSample(const std::vector<Real> & row,
     // std::cout << Moose::stringify(_inputs_sto) << std::endl;
     // std::cout << Moose::stringify(_outputs_sto) << std::endl;
     std::vector<Real> result = Predict_ADAM(row);
-    std::cout << Moose::stringify(result) << std::endl;
+    // std::cout << Moose::stringify(result) << std::endl;
     Real U_val;
     if (_flag_sample == false)
       U_val = result[1] / std::abs(result[0]); // std::abs(result[0]-0.0)/result[1]; //
     else
       U_val = 0.0001; // 100; //
-    std::cout << "U function " << U_val << std::endl;
+    // std::cout << "U function " << U_val << std::endl;
     if (_flag_sample == true)
       _flag_sample = false;
     if (U_val < 0.025) // > 2.0
