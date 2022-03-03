@@ -106,7 +106,7 @@
 
 [Executioner]
   type = Transient
-  num_steps = 100
+  num_steps = 50
 []
 
 [Outputs]

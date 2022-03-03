@@ -435,38 +435,40 @@ ActiveLearningGP::needSample(const std::vector<Real> & row,
     //   _decision = true;
   } else
   {
-    std::vector<Real> result = Predict(row);
-    std::cout << Moose::stringify(result) << std::endl;
-    _decision = false;
-    val = result[0];
-    // if (_decision == true && _flag_sample == true)
-    // {
-    //   _outputs_sto.push_back(val);
-    //   for (unsigned int k = 0; k < _inputs_sto.size(); ++k)
-    //     _inputs_sto[k].push_back(row[k]); // _inputs_prev[k]
-    //   Train();
-    // }
-    //
-    // std::cout << Moose::stringify(_outputs_sto) << std::endl;
     // std::vector<Real> result = Predict(row);
     // std::cout << Moose::stringify(result) << std::endl;
-    // Real U_val;
-    // if (_flag_sample == false)
-    //   U_val = std::abs(result[0]-320.0)/result[1]; // result[1] / result[0]; //
-    // else
-    //   U_val = 100; // 1e-3; //
+    // _decision = false;
+    // val = result[0];
+
+    if (_decision == true && _flag_sample == true)
+    {
+      _outputs_sto.push_back(val);
+      for (unsigned int k = 0; k < _inputs_sto.size(); ++k)
+        _inputs_sto[k].push_back(row[k]); // _inputs_prev[k]
+      Train();
+    }
+
+    // std::cout << Moose::stringify(_outputs_sto) << std::endl;
+    std::vector<Real> result = Predict(row);
+    // std::cout << Moose::stringify(result) << std::endl;
+    Real U_val;
+    if (_flag_sample == false)
+      U_val = result[1] / std::abs(result[0]); // std::abs(result[0]-0.0)/result[1]; //
+    else
+      U_val = 0.0001; // 100; //
     // std::cout << "U function " << U_val << std::endl;
-    // if (_flag_sample == true)
-    //   _flag_sample = false;
-    // if (U_val > 2.0)
-    // {
-    //   val = result[0];
-    //   _decision = false;
-    // } else
-    // {
-    //   _decision = true;
-    //   _flag_sample = true;
-    // }
+    if (_flag_sample == true)
+      _flag_sample = false;
+    if (U_val < 0.025) // > 2.0
+    {
+      // std::cout << "Here" << std::endl;
+      val = result[0];
+      _decision = false;
+    } else
+    {
+      _decision = true;
+      _flag_sample = true;
+    }
 
 
     // if (_decision == true)
