@@ -161,6 +161,8 @@ private:
   std::vector<Real> _len_sto;
 
   Real _amp_sto;
+
+  Real _threshold;
 };
 
 template <typename T>

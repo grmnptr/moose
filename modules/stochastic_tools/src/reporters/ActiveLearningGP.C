@@ -28,7 +28,8 @@ ActiveLearningGP::validParams()
   params += CovarianceInterface::validParams();
   params.addClassDescription("Evaluates parsed function to determine if sample needs to be "
                              "evaluated, otherwise data is set to a default value.");
-  // params.addRequiredParam<ReporterName>("output_value", "Value of the model output from the SubApp.");
+  // params.addRequiredParam<ReporterName>("output_value", "Value of the model output from the
+  // SubApp.");
   params.addRequiredParam<SamplerName>("sampler", "The sampler object.");
   params.addRequiredParam<UserObjectName>("covariance_function", "Name of covariance function.");
   params.addParam<ReporterValueName>("flag_sample", "flag_sample", "Flag samples.");
@@ -43,35 +44,36 @@ ActiveLearningGP::validParams()
                                             "Select hyperparameters to be tuned");
   params.addParam<std::vector<Real>>("tuning_min", "Minimum allowable tuning value");
   params.addParam<std::vector<Real>>("tuning_max", "Maximum allowable tuning value");
+  params.addParam<Real>("threshold", 0.0, "Threshold for the failure");
   return params;
 }
 
-ActiveLearningGP::ActiveLearningGP(
-    const InputParameters & parameters)
+ActiveLearningGP::ActiveLearningGP(const InputParameters & parameters)
   : ActiveLearningReporterTempl<Real>(parameters),
-  CovarianceInterface(parameters),
-  // _output_value(getReporterValue<std::vector<Real>>("output_value")),
-  _step(getCheckedPointerParam<FEProblemBase *>("_fe_problem_base")->timeStep()),
-  _sampler(getSampler("sampler")),
-  _param_standardizer(declareModelData<StochasticTools::Standardizer>("_param_standardizer")),
-  _data_standardizer(declareModelData<StochasticTools::Standardizer>("_data_standardizer")),
-  _covariance_function(
-      getCovarianceFunctionByName(getParam<UserObjectName>("covariance_function"))),
-  _flag_sample(declareValue<bool>("flag_sample")),
-  _do_tuning(isParamValid("tune_parameters")),
-  _tao_options(getParam<std::string>("tao_options")),
-  _show_tao(getParam<bool>("show_tao")),
-  _tao_comm(MPI_COMM_SELF),
-  _covar_type(declareModelData<std::string>("_covar_type", _covariance_function->type())),
-  _training_params(declareModelData<RealEigenMatrix>("_training_params")),
-  _K(declareModelData<RealEigenMatrix>("_K")),
-  _K_results_solve(declareModelData<RealEigenMatrix>("_K_results_solve")),
-  // _K_cho_decomp(declareModelData<Eigen::LLT<RealEigenMatrix>>("_K_cho_decomp")),
-  _standardize_params(getParam<bool>("standardize_params")),
-  _standardize_data(getParam<bool>("standardize_data")),
-  _hyperparam_map(declareModelData<std::unordered_map<std::string, Real>>("_hyperparam_map")),
-  _hyperparam_vec_map(declareModelData<std::unordered_map<std::string, std::vector<Real>>>(
-      "_hyperparam_vec_map"))
+    CovarianceInterface(parameters),
+    // _output_value(getReporterValue<std::vector<Real>>("output_value")),
+    _step(getCheckedPointerParam<FEProblemBase *>("_fe_problem_base")->timeStep()),
+    _sampler(getSampler("sampler")),
+    _param_standardizer(declareModelData<StochasticTools::Standardizer>("_param_standardizer")),
+    _data_standardizer(declareModelData<StochasticTools::Standardizer>("_data_standardizer")),
+    _covariance_function(
+        getCovarianceFunctionByName(getParam<UserObjectName>("covariance_function"))),
+    _flag_sample(declareValue<bool>("flag_sample")),
+    _do_tuning(isParamValid("tune_parameters")),
+    _tao_options(getParam<std::string>("tao_options")),
+    _show_tao(getParam<bool>("show_tao")),
+    _tao_comm(MPI_COMM_SELF),
+    _covar_type(declareModelData<std::string>("_covar_type", _covariance_function->type())),
+    _training_params(declareModelData<RealEigenMatrix>("_training_params")),
+    _K(declareModelData<RealEigenMatrix>("_K")),
+    _K_results_solve(declareModelData<RealEigenMatrix>("_K_results_solve")),
+    // _K_cho_decomp(declareModelData<Eigen::LLT<RealEigenMatrix>>("_K_cho_decomp")),
+    _standardize_params(getParam<bool>("standardize_params")),
+    _standardize_data(getParam<bool>("standardize_data")),
+    _hyperparam_map(declareModelData<std::unordered_map<std::string, Real>>("_hyperparam_map")),
+    _hyperparam_vec_map(declareModelData<std::unordered_map<std::string, std::vector<Real>>>(
+        "_hyperparam_vec_map")),
+    _threshold(getParam<Real>("threshold"))
 {
   _inputs_sto.resize(_sampler.getNumberOfCols());
   _decision = true;
@@ -104,7 +106,8 @@ ActiveLearningGP::ActiveLearningGP(
 }
 
 void
-ActiveLearningGP::SetupData(const std::vector<std::vector<Real>> & inputs, const std::vector<Real> & outputs)
+ActiveLearningGP::SetupData(const std::vector<std::vector<Real>> & inputs,
+                            const std::vector<Real> & outputs)
 {
   _training_params.setZero(outputs.size(), inputs.size());
   _training_data.setZero(outputs.size(), 1);
@@ -113,7 +116,7 @@ ActiveLearningGP::SetupData(const std::vector<std::vector<Real>> & inputs, const
   {
     _training_data(i, 0) = outputs[i];
     for (unsigned int j = 0; j < inputs.size(); ++j)
-      _training_params(i,j) = inputs[j][i];
+      _training_params(i, j) = inputs[j][i];
   }
 }
 
@@ -238,10 +241,7 @@ ActiveLearningGP::FormFunctionGradientWrapper(
 }
 
 void
-ActiveLearningGP::FormFunctionGradient(Tao /*tao*/,
-                                             Vec theta_vec,
-                                             PetscReal * f,
-                                             Vec grad_vec)
+ActiveLearningGP::FormFunctionGradient(Tao /*tao*/, Vec theta_vec, PetscReal * f, Vec grad_vec)
 {
   libMesh::PetscVector<Number> theta(theta_vec, _tao_comm);
   libMesh::PetscVector<Number> grad(grad_vec, _tao_comm);
@@ -265,10 +265,12 @@ ActiveLearningGP::FormFunctionGradient(Tao /*tao*/,
       Real grad1 = -tmp.trace() / 2.0;
       // if (hyper_param_name.compare("length_factor") == 0)
       // {
-      //   grad1 += -(std::log(_covariance_function->getLengthFactor()[ii])-0.0) * 1/_covariance_function->getLengthFactor()[ii];
+      //   grad1 += -(std::log(_covariance_function->getLengthFactor()[ii])-0.0) *
+      //   1/_covariance_function->getLengthFactor()[ii];
       // } else
       // {
-      //   grad1 += -(std::log(_covariance_function->getSignalVariance())-0.0) * 1/_covariance_function->getSignalVariance();
+      //   grad1 += -(std::log(_covariance_function->getSignalVariance())-0.0) *
+      //   1/_covariance_function->getSignalVariance();
       // }
       // std::cout << hyper_param_name << std::endl;
       grad.set(std::get<0>(iter->second) + ii, grad1);
@@ -281,10 +283,9 @@ ActiveLearningGP::FormFunctionGradient(Tao /*tao*/,
   log_likelihood += -(_training_data.transpose() * _K_results_solve)(0, 0);
   log_likelihood += -std::log(_K.determinant());
 
-  // log_likelihood += -std::pow(((std::log(_covariance_function->getSignalVariance()) - 0.0) / 1.0) , 2);
-  // std::vector<Real> len1;
-  // len1 = _covariance_function->getLengthFactor();
-  // for (unsigned int ii = 0; ii < len1.size(); ++ii)
+  // log_likelihood += -std::pow(((std::log(_covariance_function->getSignalVariance()) - 0.0) / 1.0)
+  // , 2); std::vector<Real> len1; len1 = _covariance_function->getLengthFactor(); for (unsigned int
+  // ii = 0; ii < len1.size(); ++ii)
   //   log_likelihood += -std::pow(((std::log(len1[ii]) - 0.0) / 1.0) , 2);
 
   log_likelihood += -_training_data.rows() * std::log(2 * M_PI);
@@ -295,7 +296,7 @@ ActiveLearningGP::FormFunctionGradient(Tao /*tao*/,
 
 void
 ActiveLearningGP::buildHyperParamBounds(libMesh::PetscVector<Number> & theta_l,
-                                              libMesh::PetscVector<Number> & theta_u) const
+                                        libMesh::PetscVector<Number> & theta_u) const
 {
   for (auto iter = _tuning_data.begin(); iter != _tuning_data.end(); ++iter)
   {
@@ -387,10 +388,7 @@ ActiveLearningGP::Predict(const std::vector<Real> & inputs)
 }
 
 bool
-ActiveLearningGP::needSample(const std::vector<Real> & row,
-                                              dof_id_type,
-                                              dof_id_type,
-                                              Real & val)
+ActiveLearningGP::needSample(const std::vector<Real> & row, dof_id_type, dof_id_type, Real & val)
 {
   int N = 13;
   if (_step < N)
@@ -406,7 +404,8 @@ ActiveLearningGP::needSample(const std::vector<Real> & row,
     // std::cout << "Inputs 2 " << Moose::stringify(_inputs_sto[1]) << std::endl;
     // std::cout << "Outputs " << Moose::stringify(_outputs_sto) << std::endl;
     _decision = true;
-  } else if (_step == N)
+  }
+  else if (_step == N)
   {
     _outputs_sto.push_back(val);
     for (unsigned int k = 0; k < _inputs_sto.size(); ++k)
@@ -433,7 +432,8 @@ ActiveLearningGP::needSample(const std::vector<Real> & row,
     //   val = result[0];
     // } else
     //   _decision = true;
-  } else
+  }
+  else
   {
     // std::vector<Real> result = Predict(row);
     // std::cout << Moose::stringify(result) << std::endl;
@@ -453,23 +453,25 @@ ActiveLearningGP::needSample(const std::vector<Real> & row,
     // std::cout << Moose::stringify(result) << std::endl;
     Real U_val;
     if (_flag_sample == false)
-      U_val = result[1] / std::abs(result[0]); // std::abs(result[0]-0.0)/result[1]; //
+      U_val =
+          std::abs(result[0] - _threshold) /
+          result[1]; // result[1] / std::abs(result[0]); // std::abs(result[0]-0.0)/result[1]; //
     else
-      U_val = 0.0001; // 100; //
+      U_val = 0.01; // 100; // 0.0001; // 100; //
     // std::cout << "U function " << U_val << std::endl;
     if (_flag_sample == true)
       _flag_sample = false;
-    if (U_val < 0.025) // > 2.0
+    if (U_val > 2.0) // < 0.025) // > 2.0
     {
       // std::cout << "Here" << std::endl;
       val = result[0];
       _decision = false;
-    } else
+    }
+    else
     {
       _decision = true;
       _flag_sample = true;
     }
-
 
     // if (_decision == true)
     // {
