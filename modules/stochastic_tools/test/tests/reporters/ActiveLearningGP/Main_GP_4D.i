@@ -77,7 +77,7 @@
   #   # execute_on = 'initial timestep_begin' #
   # []
   [conditional]
-    type =  ActiveLearningGP # AL_ADAM # 
+    type =  ActiveLearningGP # AL_ADAM #
     sampler = mc
     # output_value = constant/reporter_transfer:average:value
     parallel_type = ROOT
@@ -91,6 +91,7 @@
     tuning_max = '1000 1000'
     show_tao = 'true'
     flag_sample = 'flag_sample'
+    threshold = 816.16072
   []
 []
 
@@ -106,13 +107,15 @@
 
 [Executioner]
   type = Transient
-  num_steps = 50
+  num_steps = 100000
 []
 
 [Outputs]
-  # execute_on = timestep_end
   [out]
     type = JSON
     execute_system_information_on = none
+  []
+  [out_csv]
+    type = CSV
   []
 []
