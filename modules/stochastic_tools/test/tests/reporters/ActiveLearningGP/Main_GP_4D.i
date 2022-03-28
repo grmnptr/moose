@@ -91,7 +91,7 @@
     tuning_max = '1000 1000'
     show_tao = 'true'
     flag_sample = 'flag_sample'
-    threshold = 816.16072
+    threshold = 330
   []
 []
 
@@ -107,7 +107,7 @@
 
 [Executioner]
   type = Transient
-  num_steps = 100000
+  num_steps = 100
 []
 
 [Outputs]
