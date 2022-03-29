@@ -4,7 +4,7 @@
 [Distributions]
   [k_dist]
     type = Uniform
-    lower_bound = 0
+    lower_bound = 1e-7
     upper_bound = 20
   []
   [q_dist]
@@ -14,7 +14,7 @@
   []
   [L_dist]
     type = Uniform
-    lower_bound = 0.0
+    lower_bound = 1e-7
     upper_bound = 0.1
   []
   [Tinf_dist]
@@ -85,10 +85,10 @@
     covariance_function = 'covar'             #Choose a squared exponential for the kernel
     standardize_params = 'true'               #Center and scale the training params
     standardize_data = 'true'                 #Center and scale the training data
-    tao_options = '-tao_max_it 100000 -tao_max_funcs 100000 -tao_fatol 1e-10' #  -tao_cg_type hs -tao_bncg_type gd
+    tao_options = '-tao_max_it 100000 -tao_max_funcs 100000 -tao_fatol 1e-6 -tao_bncg_type prp'
     tune_parameters = 'signal_variance length_factor' #
     tuning_min = '1e-3 1e-3'
-    tuning_max = '1000 1000'
+    tuning_max = '10000 10000'
     show_tao = 'true'
     flag_sample = 'flag_sample'
     threshold = 330
@@ -107,14 +107,10 @@
 
 [Executioner]
   type = Transient
-  num_steps = 100
+  num_steps = 1000
 []
 
 [Outputs]
-  [out]
-    type = JSON
-    execute_system_information_on = none
-  []
   [out_csv]
     type = CSV
   []

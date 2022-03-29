@@ -11,6 +11,10 @@
 #include "SamplerFullSolveMultiApp.h"
 #include "Sampler.h"
 #include "StochasticToolsTransfer.h"
+#include "Executioner.h"
+#include "Transient.h"
+#include "AppFactory.h"
+#include "CommandLine.h"
 
 registerMooseObject("StochasticToolsApp", SamplerFullSolveMultiApp);
 
@@ -89,12 +93,80 @@ void SamplerFullSolveMultiApp::preTransfer(Real /*dt*/, Real /*target_time*/)
     _row_data.clear();
   }
 
-  // Reinitialize app to original state prior to solve, if a solve has occured
-  if (_solved_once)
-    initialSetup();
-
   if (isParamValid("should_run_reporter"))
     _should_run = &getReporterValue<std::vector<bool>>("should_run_reporter");
+
+  // Reinitialize app to original state prior to solve, if a solve has occured
+  if (_solved_once)
+  {
+    if (_should_run)
+      reinitApps(*_should_run);
+    else
+      initialSetup();
+  }
+}
+
+void
+SamplerFullSolveMultiApp::reinitApps(const std::vector<bool> should_run)
+{
+  if (!_use_positions)
+  {
+    if (!_has_an_app)
+      return;
+
+    // Read commandLine arguments that will be used when creating apps
+    readCommandLineArguments();
+
+    Moose::ScopedCommSwapper swapper(_my_comm);
+
+    _apps.resize(_my_num_apps);
+
+    // If the user provided an unregistered app type, see if we can load it dynamically
+    if (!AppFactory::instance().isRegistered(_app_type))
+      _app.dynamicAppRegistration(
+          _app_type, getParam<std::string>("library_path"), getParam<std::string>("library_name"));
+
+    for (unsigned int i = 0; i < _my_num_apps; i++)
+    {
+      if (should_run[i])
+      {
+        createApp(i, _global_time_offset);
+        _app.parser().hitCLIFilter(_apps[i]->name(), _app.commandLine()->getArguments());
+      }
+    }
+  }
+  if (_has_an_app)
+  {
+    Moose::ScopedCommSwapper swapper(_my_comm);
+
+    _executioners.resize(_my_num_apps);
+
+    // Grab Executioner from each app
+    for (unsigned int i = 0; i < _my_num_apps; i++)
+    {
+      if (should_run[i])
+      {
+        auto & app = _apps[i];
+        Executioner * ex = app->getExecutioner();
+
+        if (!ex)
+          mooseError("Executioner does not exist!");
+
+        if (_ignore_diverge)
+        {
+          Transient * tex = dynamic_cast<Transient *>(ex);
+          if (tex && tex->parameters().get<bool>("error_on_dtmin"))
+            mooseError("Requesting to ignore failed solutions, but 'Executioner/error_on_dtmin' is "
+                       "true in sub-application. Set this parameter to false in sub-application to "
+                       "avoid an error if Transient solve fails.");
+        }
+
+        ex->init();
+
+        _executioners[i] = ex;
+      }
+    }
+  }
 }
 
 bool

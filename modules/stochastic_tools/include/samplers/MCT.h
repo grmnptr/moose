@@ -32,6 +32,7 @@ protected:
   const std::vector<DistributionName> & _distribution_names;
 
   const bool & _flag_sample;
+  bool _last_flag;
 
 private:
   /// Track the current step of the main App

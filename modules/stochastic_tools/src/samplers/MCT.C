@@ -31,7 +31,9 @@ MCT::MCT(const InputParameters & parameters)
     ReporterInterface(this),
     _distribution_names(getParam<std::vector<DistributionName>>("distributions")),
     _flag_sample(getReporterValue<bool>("flag_sample")),
+    _last_flag(true),
     _step(getCheckedPointerParam<FEProblemBase *>("_fe_problem_base")->timeStep())
+
 {
   for (const DistributionName & name : _distribution_names)
     _distributions.push_back(&getDistributionByName(name));
@@ -50,8 +52,10 @@ MCT::computeSample(dof_id_type /*row_index*/, dof_id_type col_index)
   // _check_step = _step;
   // return _inputs_sto[col_index];
 
-  if (_flag_sample == false)
+  int sign_change(_flag_sample - _last_flag);
+  if (sign_change != 1)
     _inputs_sto[col_index] = _distributions[col_index]->quantile(getRand(_step));
+
   return _inputs_sto[col_index];
 
   // return _distributions[col_index]->quantile(getRand(_step));

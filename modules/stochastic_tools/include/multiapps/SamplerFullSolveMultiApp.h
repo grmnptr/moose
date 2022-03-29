@@ -41,6 +41,8 @@ protected:
   /// Override to allow for batch mode to get correct cli_args
   virtual std::string getCommandLineArgsParamHelper(unsigned int local_app) override;
 
+  void reinitApps(const std::vector<bool> should_run);
+
 private:
   /**
    * Helper method for running in mode='batch'

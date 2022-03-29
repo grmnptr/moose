@@ -290,7 +290,7 @@ ActiveLearningGP::FormFunctionGradient(Tao /*tao*/, Vec theta_vec, PetscReal * f
 
   log_likelihood += -_training_data.rows() * std::log(2 * M_PI);
   log_likelihood = -log_likelihood / 2;
-  std::cout << "Starting loss " << log_likelihood << std::endl;
+  // std::cout << "Starting loss " << log_likelihood << std::endl;
   *f = log_likelihood;
 }
 
@@ -403,7 +403,7 @@ ActiveLearningGP::needSample(const std::vector<Real> & row, dof_id_type, dof_id_
     // std::cout << "Inputs 1 " << Moose::stringify(_inputs_sto[0]) << std::endl;
     // std::cout << "Inputs 2 " << Moose::stringify(_inputs_sto[1]) << std::endl;
     // std::cout << "Outputs " << Moose::stringify(_outputs_sto) << std::endl;
-    _decision = true;
+    _flag_sample = true;
   }
   else if (_step == N)
   {
@@ -413,12 +413,16 @@ ActiveLearningGP::needSample(const std::vector<Real> & row, dof_id_type, dof_id_
     // Train();
     // std::cout << Moose::stringify(_inputs_sto) << std::endl;
     // std::cout << Moose::stringify(_outputs_sto) << std::endl;
+    _console << "Used for training ";
+    for (const auto & it : _outputs_sto)
+      _console << it << " ";
+    _console << std::endl;
     Train();
     // std::cout << Moose::stringify(row) << std::endl;
 
     std::vector<Real> result = Predict(row);
     std::cout << Moose::stringify(result) << std::endl;
-    _decision = false;
+    _flag_sample = false;
     val = result[0];
 
     // std::vector<Real> result = Predict(row);
@@ -440,9 +444,13 @@ ActiveLearningGP::needSample(const std::vector<Real> & row, dof_id_type, dof_id_
     // _decision = false;
     // val = result[0];
 
-    if (_decision == true && _flag_sample == true)
+    if (_flag_sample)
     {
       _outputs_sto.push_back(val);
+      _console << "Used for training ";
+      for (const auto & it : _outputs_sto)
+        _console << it << " ";
+      _console << std::endl;
       for (unsigned int k = 0; k < _inputs_sto.size(); ++k)
         _inputs_sto[k].push_back(row[k]); // _inputs_prev[k]
       Train();
@@ -451,27 +459,21 @@ ActiveLearningGP::needSample(const std::vector<Real> & row, dof_id_type, dof_id_
     // std::cout << Moose::stringify(_outputs_sto) << std::endl;
     std::vector<Real> result = Predict(row);
     // std::cout << Moose::stringify(result) << std::endl;
-    Real U_val;
-    if (_flag_sample == false)
+    Real U_val = 0.0;
+    if (!_flag_sample)
       U_val =
           std::abs(result[0] - _threshold) /
           result[1]; // result[1] / std::abs(result[0]); // std::abs(result[0]-0.0)/result[1]; //
-    else
-      U_val = 0.01; // 100; // 0.0001; // 100; //
+
     // std::cout << "U function " << U_val << std::endl;
-    if (_flag_sample == true)
-      _flag_sample = false;
-    if (U_val > 2.0) // < 0.025) // > 2.0
+    if (_flag_sample || U_val > 2.0) // < 0.025) // > 2.0
     {
       // std::cout << "Here" << std::endl;
       val = result[0];
-      _decision = false;
+      _flag_sample = false;
     }
     else
-    {
-      _decision = true;
       _flag_sample = true;
-    }
 
     // if (_decision == true)
     // {
@@ -491,6 +493,6 @@ ActiveLearningGP::needSample(const std::vector<Real> & row, dof_id_type, dof_id_
     // } else
     //   _decision = true;
   }
-  _inputs_prev = row;
-  return _decision;
+  // _inputs_prev = row;
+  return _flag_sample;
 }

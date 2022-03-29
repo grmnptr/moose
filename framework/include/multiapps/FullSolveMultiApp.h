@@ -39,7 +39,7 @@ public:
   virtual void backup() override;
   virtual void restore(bool force = true) override;
 
-private:
+protected:
   /// Switch to tell executioner to keep going despite app solve not converging
   const bool _ignore_diverge;
 
