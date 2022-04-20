@@ -78,7 +78,7 @@ LibtorchANNTrainer::LibtorchANNTrainer(const InputParameters & parameters)
     _print_epoch_loss(getParam<unsigned int>("print_epoch_loss"))
 #ifdef LIBTORCH_ENABLED
     ,
-    _nn(declareModelData<std::shared_ptr<Moose::LibtorchArtificialNeuralNet>>("nn"))
+    _nn(declareModelData<Moose::LibtorchArtificialNeuralNet>("nn"))
 #endif
 {
   // We check if MOOSE is compiled with torch, if not this throws an error
@@ -142,16 +142,17 @@ LibtorchANNTrainer::postTrain()
       std::move(data_set), sample_per_batch);
 
   // We create a neural net (for the definition of the net see the header file)
-  _nn = std::make_shared<Moose::LibtorchArtificialNeuralNet>(
+  _nn.constructNeuralNetwork(
       _filename, num_inputs, 1, _num_neurons_per_layer, _activation_function);
 
   // Initialize the optimizer
-  torch::optim::Adam optimizer(_nn->parameters(), torch::optim::AdamOptions(_learning_rate));
+  torch::optim::Adam optimizer(_nn.parameters(), torch::optim::AdamOptions(_learning_rate));
 
   if (_read_from_file)
     try
     {
-      torch::load(_nn, _filename);
+      std::shared_ptr<Moose::LibtorchArtificialNeuralNet> shared_nn(&_nn);
+      torch::load(shared_nn, _filename);
       _console << "Loaded requested .pt file." << std::endl;
     }
     catch (...)
@@ -174,7 +175,7 @@ LibtorchANNTrainer::postTrain()
       optimizer.zero_grad();
 
       // Compute prediction
-      torch::Tensor prediction = _nn->forward(batch.data);
+      torch::Tensor prediction = _nn.forward(batch.data);
 
       // Compute loss values using a MSE ( mean squared error)
       torch::Tensor loss = torch::mse_loss(prediction.reshape({prediction.size(0)}), batch.target);

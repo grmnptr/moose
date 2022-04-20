@@ -22,6 +22,8 @@ namespace Moose
 class LibtorchArtificialNeuralNet : public LibtorchNeuralNetBase
 {
 public:
+  /// Default constructor
+  LibtorchArtificialNeuralNet();
   /**
    * Construct using input parameters
    * @param name Name of the neural network
@@ -66,27 +68,48 @@ public:
 
   /// Construct the neural network
   void constructNeuralNetwork();
+  /// Construct the neural network
+  void constructNeuralNetwork(const std::string name,
+                              const unsigned int num_inputs,
+                              const unsigned int num_outputs,
+                              const std::vector<unsigned int> & num_neurons_per_layer,
+                              const std::vector<std::string> activation_function = {"relu"});
 
 protected:
+  /// Check hidden-layer-related parameter errors
+  void checkHiddenLayerParameterErrors();
+
   /// Name of the neural network
-  const std::string _name;
+  std::string _name;
+  /// Boolean to show if the neural net has been constructed
+  bool _constructed;
   /// Submodules that hold linear operations and the corresponding
   /// weights and biases (y = W * x + b)
   std::vector<torch::nn::Linear> _weights;
   // Number of neurons on the input layer
-  const unsigned int _num_inputs;
+  unsigned int _num_inputs;
   /// Number of neurons on the output layer
-  const unsigned int _num_outputs;
+  unsigned int _num_outputs;
   /// Hidden layer architecture
-  const std::vector<unsigned int> _num_neurons_per_layer;
+  std::vector<unsigned int> _num_neurons_per_layer;
   /// Number of hidden layers in the neural network
-  const unsigned int _num_hidden_layers;
+  unsigned int _num_hidden_layers;
   /// Activation functions (either one for all hidden layers or one for every layer
   /// separately)
   MultiMooseEnum _activation_function;
 };
 
 }
+
+template <>
+void dataStore<Moose::LibtorchArtificialNeuralNet>(std::ostream & stream,
+                                                   Moose::LibtorchArtificialNeuralNet & nn,
+                                                   void * context);
+
+template <>
+void dataLoad<Moose::LibtorchArtificialNeuralNet>(std::istream & stream,
+                                                  Moose::LibtorchArtificialNeuralNet & nn,
+                                                  void * context);
 
 template <>
 void dataStore<Moose::LibtorchArtificialNeuralNet>(

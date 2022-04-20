@@ -23,7 +23,7 @@ LibtorchANNSurrogate::LibtorchANNSurrogate(const InputParameters & parameters)
   : SurrogateModel(parameters)
 #ifdef LIBTORCH_ENABLED
     ,
-    _nn(getModelData<std::shared_ptr<Moose::LibtorchArtificialNeuralNet>>("nn"))
+    _nn(setModelData<Moose::LibtorchArtificialNeuralNet>("nn"))
 #endif
 {
   // We check if MOOSE is compiled with torch, if not this throws an error
@@ -42,13 +42,13 @@ LibtorchANNSurrogate::evaluate(const std::vector<Real> &
 #ifdef LIBTORCH_ENABLED
 
   // Check whether input point has same dimensionality as training data
-  mooseAssert(_nn->numInputs() == x.size(),
+  mooseAssert(_nn.numInputs() == x.size(),
               "Input point does not match dimensionality of training data.");
 
   torch::Tensor x_tf = torch::tensor(torch::ArrayRef<Real>(x.data(), x.size())).to(at::kDouble);
 
   // Compute prediction
-  val = _nn->forward(x_tf).item<double>();
+  val = _nn.forward(x_tf).item<double>();
 #endif
 
   return val;
