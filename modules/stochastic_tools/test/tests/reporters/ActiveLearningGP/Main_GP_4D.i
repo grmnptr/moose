@@ -4,7 +4,7 @@
 [Distributions]
   [k_dist]
     type = Uniform
-    lower_bound = 1e-7
+    lower_bound = 5
     upper_bound = 20
   []
   [q_dist]
@@ -14,13 +14,13 @@
   []
   [L_dist]
     type = Uniform
-    lower_bound = 1e-7
-    upper_bound = 0.1
+    lower_bound = 0.05
+    upper_bound = 0.15
   []
   [Tinf_dist]
     type = Uniform
-    lower_bound = 270
-    upper_bound = 330
+    lower_bound = 250
+    upper_bound = 350
   []
 []
 
@@ -72,26 +72,31 @@
 []
 
 [Reporters]
-  # [constant]
-  #   type = StochasticReporter
-  #   # execute_on = 'initial timestep_begin' #
-  # []
+  [constant]
+     type = ConstantReporter
+     execute_on = 'final'
+  []
   [conditional]
     type =  ActiveLearningGP # AL_ADAM #
     sampler = mc
-    # output_value = constant/reporter_transfer:average:value
     parallel_type = ROOT
     execute_on = 'initial timestep_begin'
     covariance_function = 'covar'             #Choose a squared exponential for the kernel
     standardize_params = 'true'               #Center and scale the training params
     standardize_data = 'true'                 #Center and scale the training data
-    tao_options = '-tao_max_it 100000 -tao_max_funcs 100000 -tao_fatol 1e-6 -tao_bncg_type prp'
+    tao_options = '-tao_max_it 100000 -tao_max_funcs 100000 -tao_fatol 1e-6 -tao_bncg_type prp -tao_bncg_xi=0.7'
     tune_parameters = 'signal_variance length_factor' #
     tuning_min = '1e-3 1e-3'
     tuning_max = '10000 10000'
     show_tao = 'true'
     flag_sample = 'flag_sample'
-    threshold = 330
+    threshold = 349.345
+    outputs = cout
+  []
+  [acc]
+    type = AccumulateReporter
+    reporters = 'conditional/value'
+    outputs = aout
   []
 []
 
@@ -107,11 +112,16 @@
 
 [Executioner]
   type = Transient
-  num_steps = 1000
+  num_steps = 10000
 []
 
 [Outputs]
-  [out_csv]
+  [cout]
     type = CSV
+    execute_on = timestep_end
+  []
+  [aout]
+    type = CSV
+    execute_on = final
   []
 []

@@ -106,6 +106,8 @@ private:
 
   bool & _flag_sample;
 
+  Real & _value;
+
   bool _do_tuning;
 
   std::string _tao_options;

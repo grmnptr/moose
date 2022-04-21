@@ -33,6 +33,7 @@ ActiveLearningGP::validParams()
   params.addRequiredParam<SamplerName>("sampler", "The sampler object.");
   params.addRequiredParam<UserObjectName>("covariance_function", "Name of covariance function.");
   params.addParam<ReporterValueName>("flag_sample", "flag_sample", "Flag samples.");
+  params.addParam<ReporterValueName>("value_name", "value", "NAme of value reporter.");
   params.addParam<bool>(
       "standardize_params", true, "Standardize (center and scale) training parameters (x values)");
   params.addParam<bool>(
@@ -59,6 +60,7 @@ ActiveLearningGP::ActiveLearningGP(const InputParameters & parameters)
     _covariance_function(
         getCovarianceFunctionByName(getParam<UserObjectName>("covariance_function"))),
     _flag_sample(declareValue<bool>("flag_sample")),
+    _value(declareValue<Real>("value_name")),
     _do_tuning(isParamValid("tune_parameters")),
     _tao_options(getParam<std::string>("tao_options")),
     _show_tao(getParam<bool>("show_tao")),
@@ -494,5 +496,6 @@ ActiveLearningGP::needSample(const std::vector<Real> & row, dof_id_type, dof_id_
     //   _decision = true;
   }
   // _inputs_prev = row;
+  _value = val;
   return _flag_sample;
 }
