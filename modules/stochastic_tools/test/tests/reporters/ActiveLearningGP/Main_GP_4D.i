@@ -66,7 +66,7 @@
     type = SamplerReporterTransfer
     from_reporter = 'avg/value'
     stochastic_reporter = 'conditional' # constant
-    multi_app = sub
+    from_multi_app = sub
     sampler = mc
   []
 []
@@ -84,11 +84,11 @@
     covariance_function = 'covar'             #Choose a squared exponential for the kernel
     standardize_params = 'true'               #Center and scale the training params
     standardize_data = 'true'                 #Center and scale the training data
-    tao_options = '-tao_max_it 100000 -tao_max_funcs 100000 -tao_fatol 1e-6 -tao_bncg_type prp -tao_bncg_xi=0.7'
-    tune_parameters = 'signal_variance length_factor' #
-    tuning_min = '1e-3 1e-3'
-    tuning_max = '10000 10000'
-    show_tao = 'true'
+    # tao_options = '-tao_max_it 100000 -tao_max_funcs 100000 -tao_fatol 1e-5 -tao_bncg_type dk'
+    # tune_parameters = 'signal_variance length_factor' #
+    # tuning_min = '1e-3 1e-3'
+    # tuning_max = '10000 10000'
+    # show_tao = 'true'
     flag_sample = 'flag_sample'
     threshold = 349.345
     outputs = cout
@@ -112,7 +112,7 @@
 
 [Executioner]
   type = Transient
-  num_steps = 10000
+  num_steps = 5000
 []
 
 [Outputs]
