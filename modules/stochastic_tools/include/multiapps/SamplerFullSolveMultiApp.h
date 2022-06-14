@@ -28,6 +28,9 @@ public:
   virtual bool solveStep(Real dt, Real target_time, bool auto_advance = true) override;
   virtual void preTransfer(Real dt, Real target_time) override;
 
+  /// Reinitializes applications based if they need to be run or not
+  virtual void reinitApps(const std::vector<bool> & should_run = std::vector<bool>()) override;
+
   /**
    * Helper for inserting row data into commandline arguments
    * Used here and in SamplerTransientMultiApp

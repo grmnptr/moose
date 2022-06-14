@@ -25,6 +25,16 @@ public:
 
   virtual void initialSetup() override;
 
+  /// Resets the executioners of the owned applications. Used in cases when
+  /// we don't want to reset executioners without reinitializing the whole system
+  /// @param needs_reset a vector of flags showing which executioners needs to be reset
+  virtual void resetExecutioners(const std::vector<bool> & needs_reset = std::vector<bool>());
+
+  /// Reinitialize applications. This means that the old applications are destroyed and
+  /// new ones are created to replace the old.
+  /// @param needs_reset a vector of flags showing which executioners needs to be reset
+  virtual void reinitApps(const std::vector<bool> & needs_reset = std::vector<bool>());
+
   virtual bool solveStep(Real dt, Real target_time, bool auto_advance = true) override;
 
   virtual void finalize() override
@@ -38,6 +48,11 @@ public:
 
   virtual void backup() override;
   virtual void restore(bool force = true) override;
+
+  virtual bool ignoreDiverge() { return _ignore_diverge; }
+
+  std::vector<Executioner *> & setExecutioners() { return _executioners; }
+  const std::vector<Executioner *> & getExecutioners() const { return _executioners; }
 
 private:
   /// Switch to tell executioner to keep going despite app solve not converging

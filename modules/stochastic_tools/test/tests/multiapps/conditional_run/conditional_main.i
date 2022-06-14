@@ -15,6 +15,7 @@
     input_files = 'sub.i'
     mode = batch-reset
     should_run_reporter = conditional/need_sample
+    execute_on = 'timestep_end'
   []
 []
 

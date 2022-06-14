@@ -12,6 +12,8 @@
 #include "Executioner.h"
 #include "Transient.h"
 #include "Console.h"
+#include "AppFactory.h"
+#include "CommandLine.h"
 
 // libMesh
 #include "libmesh/mesh_tools.h"
@@ -63,39 +65,91 @@ FullSolveMultiApp::restore(bool /*force*/)
 }
 
 void
-FullSolveMultiApp::initialSetup()
+FullSolveMultiApp::resetExecutioners(const std::vector<bool> & needs_reset)
 {
-  MultiApp::initialSetup();
-
   if (_has_an_app)
   {
+    if (needs_reset.size())
+      mooseAssert(needs_reset.size() == _my_num_apps,
+                  "The number of applications need to be the same as the number of flags!");
+
     Moose::ScopedCommSwapper swapper(_my_comm);
 
     _executioners.resize(_my_num_apps);
 
     // Grab Executioner from each app
+    bool perform_reset;
     for (unsigned int i = 0; i < _my_num_apps; i++)
     {
-      auto & app = _apps[i];
-      Executioner * ex = app->getExecutioner();
-
-      if (!ex)
-        mooseError("Executioner does not exist!");
-
-      if (_ignore_diverge)
+      perform_reset = needs_reset.size() ? needs_reset[i] : true;
+      if (perform_reset)
       {
-        Transient * tex = dynamic_cast<Transient *>(ex);
-        if (tex && tex->parameters().get<bool>("error_on_dtmin"))
-          mooseError("Requesting to ignore failed solutions, but 'Executioner/error_on_dtmin' is "
-                     "true in sub-application. Set this parameter to false in sub-application to "
-                     "avoid an error if Transient solve fails.");
+        auto & app = _apps[i];
+        Executioner * ex = app->getExecutioner();
+
+        if (!ex)
+          mooseError("Executioner does not exist!");
+
+        if (_ignore_diverge)
+        {
+          Transient * tex = dynamic_cast<Transient *>(ex);
+          if (tex && tex->parameters().get<bool>("error_on_dtmin"))
+            mooseError("Requesting to ignore failed solutions, but 'Executioner/error_on_dtmin' is "
+                       "true in sub-application. Set this parameter to false in sub-application to "
+                       "avoid an error if Transient solve fails.");
+        }
+
+        ex->init();
+
+        _executioners[i] = ex;
       }
-
-      ex->init();
-
-      _executioners[i] = ex;
     }
   }
+}
+
+void
+FullSolveMultiApp::reinitApps(const std::vector<bool> & needs_reset)
+{
+  if (!_use_positions)
+  {
+    if (!_has_an_app)
+      return;
+
+    if (needs_reset.size())
+      mooseAssert(needs_reset.size() == _my_num_apps,
+                  "The number of applications need to be the same as the number of flags!");
+
+    // Read commandLine arguments that will be used when creating apps
+    readCommandLineArguments();
+
+    Moose::ScopedCommSwapper swapper(_my_comm);
+
+    _apps.resize(_my_num_apps);
+
+    // If the user provided an unregistered app type, see if we can load it dynamically
+    if (!AppFactory::instance().isRegistered(_app_type))
+      _app.dynamicAppRegistration(
+          _app_type, getParam<std::string>("library_path"), getParam<std::string>("library_name"));
+
+    bool perform_reset;
+    for (unsigned int i = 0; i < _my_num_apps; i++)
+    {
+      perform_reset = needs_reset.size() ? needs_reset[i] : true;
+      if (perform_reset)
+      {
+        createApp(i, _global_time_offset);
+        _app.parser().hitCLIFilter(_apps[i]->name(), _app.commandLine()->getArguments());
+      }
+    }
+  }
+}
+
+void
+FullSolveMultiApp::initialSetup()
+{
+  MultiApp::initialSetup();
+
+  resetExecutioners();
 }
 
 bool

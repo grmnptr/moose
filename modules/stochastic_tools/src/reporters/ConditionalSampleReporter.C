@@ -92,6 +92,8 @@ ConditionalSampleReporterTempl<T>::needSample(const std::vector<Real> & row,
   if (_use_time)
     _func_params[_sampler_vars.size()] = this->_t;
 
+  std::cout << "Func pars " << _func_params[0] << std::endl;
+  std::cout << "T " << this->_t << std::endl;
   // If the function is not zero, then a sample is needed
   if (evaluate(_func_F))
     return true;

@@ -76,7 +76,8 @@ SamplerFullSolveMultiApp::SamplerFullSolveMultiApp(const InputParameters & param
                "Conditionally run sampler multiapp only works in batch modes.");
 }
 
-void SamplerFullSolveMultiApp::preTransfer(Real /*dt*/, Real /*target_time*/)
+void
+SamplerFullSolveMultiApp::preTransfer(Real /*dt*/, Real /*target_time*/)
 {
   // Reinitialize MultiApp size
   const auto num_rows = _sampler.getNumberOfRows();
@@ -89,12 +90,29 @@ void SamplerFullSolveMultiApp::preTransfer(Real /*dt*/, Real /*target_time*/)
     _row_data.clear();
   }
 
-  // Reinitialize app to original state prior to solve, if a solve has occured
-  if (_solved_once)
-    initialSetup();
-
   if (isParamValid("should_run_reporter"))
     _should_run = &getReporterValue<std::vector<bool>>("should_run_reporter");
+
+  for (const auto & it : *_should_run)
+    _console << "Should run " << it << std::endl;
+
+  // Reinitialize app to original state prior to solve, if a solve has occured
+  if (_solved_once)
+  {
+    // If we have a conditional solve, we initialize the selected apps. Otherwise
+    // we just initialize everything
+    if (_should_run)
+      reinitApps(*_should_run);
+    else
+      initialSetup();
+  }
+}
+
+void
+SamplerFullSolveMultiApp::reinitApps(const std::vector<bool> & should_run)
+{
+  FullSolveMultiApp::reinitApps(should_run);
+  resetExecutioners(should_run);
 }
 
 bool
