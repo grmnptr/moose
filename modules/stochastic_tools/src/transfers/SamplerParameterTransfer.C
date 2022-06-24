@@ -49,6 +49,9 @@ SamplerParameterTransfer::SamplerParameterTransfer(const InputParameters & param
 void
 SamplerParameterTransfer::execute()
 {
+  std::cout << "Sampler local rows: " << _sampler_ptr->getNumberOfLocalRows() << std::endl;
+  std::cout << "Toapp local rows: " <<  getToMultiApp()->numLocalApps() << std::endl;
+ 
   mooseAssert((_sampler_ptr->getNumberOfLocalRows() == 0) ||
                   (_sampler_ptr->getNumberOfLocalRows() == getToMultiApp()->numLocalApps()),
               "The number of MultiApps and the number of sample rows must be the same.");
@@ -66,6 +69,8 @@ SamplerParameterTransfer::execute()
 
     // Populate the row of data to transfer
     std::vector<Real> row = _sampler_ptr->getNextLocalRow();
+
+    std::cout << "Transferring row: " << Moose::stringify(row) << std::endl;
 
     // Perform the transfer
     ptr->transfer(_parameter_names, row);

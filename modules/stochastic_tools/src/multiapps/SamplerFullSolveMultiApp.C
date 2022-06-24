@@ -190,6 +190,7 @@ SamplerFullSolveMultiApp::solveStepBatch(Real dt, Real target_time, bool auto_ad
       }
       else
       {
+        resetApp(_local_batch_app_index + i, target_time);
         initialSetup();
       }
     }
