@@ -154,6 +154,8 @@ MultiAppSamplerControl::execute()
   for (auto & clia : cli_args)
     clia += oss.str();
 
+  std::cout << "Within the control: " << Moose::stringify(cli_args) << std::endl;
+
   setControllableValueByName<std::vector<std::string>>(
       "MultiApp", _multi_app->name(), "cli_args", cli_args);
 }

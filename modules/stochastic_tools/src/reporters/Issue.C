@@ -39,8 +39,7 @@ IssueTempl<T>::validParams()
 }
 
 template <typename T>
-IssueTempl<T>::IssueTempl(
-    const InputParameters & parameters)
+IssueTempl<T>::IssueTempl(const InputParameters & parameters)
   : ActiveLearningReporterTempl<T>(parameters),
     FunctionParserUtils<false>(parameters),
     _function(this->template getParam<std::string>("function")),
@@ -83,12 +82,13 @@ IssueTempl<T>::IssueTempl(
 template <typename T>
 bool
 IssueTempl<T>::needSample(const std::vector<Real> & row,
-                                              dof_id_type local_ind,
-                                              dof_id_type,
-                                              T & val)
+                          dof_id_type local_ind,
+                          dof_id_type,
+                          T & val)
 {
   bool decision = false;
   std::cout << "Step " << _step << std::endl;
+  std::cout << "Local index: " << local_ind << std::endl;
 
   if (_step == 0)
     val = _default_value;
@@ -96,23 +96,34 @@ IssueTempl<T>::needSample(const std::vector<Real> & row,
   if (_step == 1)
   {
     if (local_ind == 0)
-        decision = true;
+      decision = true;
+    // else if (local_ind == 1)
+    //   decision = true;
     else
-        val = _default_value;
+      val = _default_value;
   }
 
   if (_step == 2)
   {
     if (local_ind == 1)
-        decision = true;
+      decision = true;
+    // else if (local_ind == 2)
+    //   decision = true;
     else
-        val = _default_value;
+      val = _default_value;
+  }
+
+  if (_step == 3)
+  {
+    if (local_ind == 0)
+      decision = true;
+    // else if (local_ind == 2)
+    //   decision = true;
+    else
+      val = _default_value;
   }
 
   return decision;
-    
-
-
 }
 
 // Explicit instantiation (more types can easily be added)

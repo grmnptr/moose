@@ -75,7 +75,9 @@ private:
   getActiveStochasticToolsTransfers(Transfer::DIRECTION direction);
 
   // Flag indicating a solve has occured
+  bool _in_solve_phase;
   bool _solved_once;
+  int _sample_counter = 0;
 
   // Sampler size, to test if the MultiApp object needs to be re-initialize
   dof_id_type _number_of_sampler_rows;

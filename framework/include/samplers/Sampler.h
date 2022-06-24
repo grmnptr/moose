@@ -118,6 +118,16 @@ public:
     return batch_mode ? _rank_config.second : _rank_config.first;
   }
 
+  /**
+   * Method to populate a complete row of sample data.
+   * @param i The global row index to compute
+   * @param data The correctly sized vector of sample value to poplulate
+
+   * This method should not be called directly, it is automatically called by the public
+   * getGlobalSamples(), getLocalSamples(), or getNextLocalRow() methods.
+   */
+  virtual void computeSampleRow(dof_id_type i, std::vector<Real> & data);
+
 protected:
   /**
    * Enum describing the type of parallel communication to perform.
@@ -208,17 +218,6 @@ protected:
   virtual void computeSampleMatrix(DenseMatrix<Real> & matrix);
   virtual void computeLocalSampleMatrix(DenseMatrix<Real> & matrix);
   ///@}
-
-  ///@{
-  /**
-   * Method to populate a complete row of sample data.
-   * @param i The global row index to compute
-   * @param data The correctly sized vector of sample value to poplulate
-
-   * This method should not be called directly, it is automatically called by the public
-   * getGlobalSamples(), getLocalSamples(), or getNextLocalRow() methods.
-   */
-  virtual void computeSampleRow(dof_id_type i, std::vector<Real> & data);
 
   /**
    * Method for advancing the random number generator(s) by the supplied number or calls to rand().

@@ -66,6 +66,13 @@ MCT::computeSample(dof_id_type row_index, dof_id_type col_index)
         _inputs_sto[row_index][col_index] = 0.75;
     }
 
+    // if (row_index == 2)
+    // {
+    //   if (col_index == 0)
+    //     _inputs_sto[row_index][col_index] = 0.15;
+    //   else
+    //     _inputs_sto[row_index][col_index] = 0.55;
+    // }
   }
 
   if (_step == 2)
@@ -81,18 +88,55 @@ MCT::computeSample(dof_id_type row_index, dof_id_type col_index)
     if (row_index == 1)
     {
       if (col_index == 0)
-        _inputs_sto[row_index][col_index] = 0.25;
+        _inputs_sto[row_index][col_index] = 0.30;
       else
-        _inputs_sto[row_index][col_index] = 0.75;
+        _inputs_sto[row_index][col_index] = 0.70;
     }
 
+    // if (row_index == 2)
+    // {
+    //   if (col_index == 0)
+    //     _inputs_sto[row_index][col_index] = 0.35;
+    //   else
+    //     _inputs_sto[row_index][col_index] = 0.85;
+    // }
   }
 
-  if (_step > 2 && col_index == 0 && _check_step != _step) //  
+  if (_step == 3)
+  {
+    if (row_index == 0)
     {
-      for (dof_id_type j = 0; j < _distributions.size(); ++j)
-        _inputs_sto[row_index][j] = _distributions[j]->quantile(getRand(_step));
+      if (col_index == 0)
+        _inputs_sto[row_index][col_index] = 0.1;
+      else
+        _inputs_sto[row_index][col_index] = 0.1;
     }
+
+    if (row_index == 1)
+    {
+      if (col_index == 0)
+        _inputs_sto[row_index][col_index] = 0.25;
+      else
+        _inputs_sto[row_index][col_index] = 0.45;
+    }
+
+    // if (row_index == 2)
+    // {
+    //   if (col_index == 0)
+    //     _inputs_sto[row_index][col_index] = 0.35;
+    //   else
+    //     _inputs_sto[row_index][col_index] = 0.55;
+    // }
+  }
+
+  std::cout << " In sampler: step " << _step << " row " << row_index << " Params "
+            << Moose::stringify(_inputs_sto) << std::endl;
+
+  if (_step > 3 && col_index == 0 && _check_step != _step) //
+  {
+    for (dof_id_type j = 0; j < _distributions.size(); ++j)
+      _inputs_sto[row_index][j] = _distributions[j]->quantile(getRand(_step));
+  }
   _check_step = _step;
   return _inputs_sto[row_index][col_index];
 }
