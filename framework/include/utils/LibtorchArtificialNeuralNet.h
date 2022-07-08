@@ -64,6 +64,8 @@ public:
   /// Return the multi enum containing the activation functions
   const MultiMooseEnum & activationFunctions() const { return _activation_function; }
 
+  std::vector<std::string> activationNames() const { return _activation_function.getNames(); }
+
   /// Construct the neural network
   void constructNeuralNetwork();
 

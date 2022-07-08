@@ -9,7 +9,10 @@
 
 #pragma once
 
-#include "LibtorchSimpleNeuralNet.h"
+#ifdef LIBTORCH_ENABLED
+#include "LibtorchArtificialNeuralNet.h"
+#endif
+
 #include "Control.h"
 
 /**
@@ -30,10 +33,10 @@ public:
 
   virtual void execute() override;
 
-#ifdef TORCH_ENABLED
+  #ifdef LIBTORCH_ENABLED
   void
-  loadControlNeuralNet(const std::shared_ptr<StochasticTools::LibtorchSimpleNeuralNet> & input_nn);
-#endif
+  loadControlNeuralNet(const std::shared_ptr<Moose::LibtorchArtificialNeuralNet> & input_nn);
+  #endif
 
 private:
   std::vector<Real> _old_response;
@@ -45,9 +48,10 @@ private:
 
   std::vector<PostprocessorName> _response_names, _postprocessor_names;
 
-#ifdef TORCH_ENABLED
+  #ifdef LIBTORCH_ENABLED
   /// Pointer to the neural net object which is supposed to be used to control
   /// the input values
-  std::shared_ptr<StochasticTools::LibtorchSimpleNeuralNet> _nn;
-#endif
+  std::shared_ptr<Moose::LibtorchArtificialNeuralNet> _nn;
+  #endif
+
 };

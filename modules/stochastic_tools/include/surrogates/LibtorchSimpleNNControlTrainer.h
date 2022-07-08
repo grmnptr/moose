@@ -9,9 +9,9 @@
 
 #pragma once
 
-#ifdef TORCH_ENABLED
+#ifdef LIBTORCH_ENABLED
 #include <torch/torch.h>
-#include "LibtorchSimpleNeuralNet.h"
+#include "LibtorchArtificialNeuralNet.h"
 #endif
 
 #include "libmesh/utility.h"
@@ -34,15 +34,15 @@ public:
 
   void trainController();
 
-#ifdef TORCH_ENABLED
-  const std::shared_ptr<StochasticTools::LibtorchSimpleNeuralNet> & controlNeuralNet() const
+#ifdef LIBTORCH_ENABLED
+  const std::shared_ptr<Moose::LibtorchArtificialNeuralNet> & controlNeuralNet() const
   {
     return _control_nn;
   }
 #endif
 
 protected:
-#ifdef TORCH_ENABLED
+#ifdef LIBTORCH_ENABLED
 
   // A custom strcuture which is used to organize data foor the training of
   // torch-based neural nets.
@@ -86,11 +86,11 @@ private:
   /// Number of epochs for the training of the emulator
   unsigned int _no_emulator_epocs;
 
-  /// Number of hidden layers in the emulator neural net
-  unsigned int & _no_emulator_hidden_layers;
-
   /// Number of neurons within the hidden layers i nthe emulator neural net
-  std::vector<unsigned int> & _no_emulator_neurons_per_layer;
+  std::vector<unsigned int> _no_emulator_neurons_per_layer;
+
+  /// Activation functions for each layer in the emulator neural net
+  std::vector<std::string> _emulator_activation_functions;
 
   /// The learning rate for the optimization algorithm in the meulator
   Real _emulator_learning_rate;
@@ -101,11 +101,11 @@ private:
   /// Number of control loops for the training
   unsigned int _no_control_loops;
 
-  /// Number of hidden layers in the neural net
-  unsigned int & _no_control_hidden_layers;
-
   /// Number of neurons within the hidden layers in the control neural net
-  std::vector<unsigned int> & _no_control_neurons_per_layer;
+  std::vector<unsigned int> _no_control_neurons_per_layer;
+
+  /// Activation functions for each layer in the control neural net
+  std::vector<std::string> _control_activation_functions;
 
   /// The control learning rate for the optimization algorithm
   Real _control_learning_rate;
@@ -119,11 +119,11 @@ private:
   /// MOOSE or python runs for retraining and further manipulation)
   bool _read_from_file;
 
-#ifdef TORCH_ENABLED
+#ifdef LIBTORCH_ENABLED
   /// Pointer to the emulator neural net object (initialized as null)
-  std::shared_ptr<StochasticTools::LibtorchSimpleNeuralNet> & _control_nn;
+  std::shared_ptr<Moose::LibtorchArtificialNeuralNet> _control_nn;
 
   /// Pointer to the controller neural net object (initialized as null)
-  std::shared_ptr<StochasticTools::LibtorchSimpleNeuralNet> & _emulator_nn;
+  std::shared_ptr<Moose::LibtorchArtificialNeuralNet> _emulator_nn;
 #endif
 };

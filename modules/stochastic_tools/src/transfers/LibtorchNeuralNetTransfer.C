@@ -37,6 +37,7 @@ LibtorchNeuralNetTransfer::LibtorchNeuralNetTransfer(const InputParameters & par
 void
 LibtorchNeuralNetTransfer::execute()
 {
+  #ifdef LIBTORCH_ENABLED
   // Selecting the appropriate action based on the drection.
   switch (_direction)
   {
@@ -47,7 +48,7 @@ LibtorchNeuralNetTransfer::execute()
 
     case TO_MULTIAPP:
 
-      const std::shared_ptr<StochasticTools::LibtorchSimpleNeuralNet> & trainer_nn =
+      const std::shared_ptr<Moose::LibtorchArtificialNeuralNet> & trainer_nn =
           _trainer.controlNeuralNet();
 
       FEProblemBase & app_problem = _multi_app->appProblemBase(0);
@@ -64,4 +65,5 @@ LibtorchNeuralNetTransfer::execute()
 
       break;
   }
+  #endif
 }

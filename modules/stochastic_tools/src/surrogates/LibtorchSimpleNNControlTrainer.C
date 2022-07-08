@@ -29,12 +29,14 @@ LibtorchSimpleNNControlTrainer::validParams()
   params.addParam<unsigned int>("no_emulator_epocs", 1, "Number of epochs.");
   params.addParam<unsigned int>("no_control_epocs", 1, "Number of epochs for the control.");
   params.addParam<unsigned int>("no_control_loops", 1, "Number of loops for training the control.");
-  params.addParam<unsigned int>("no_control_hidden_layers", 0, "Number of hidden layers.");
-  params.addParam<unsigned int>("no_emulator_hidden_layers", 0, "Number of hidden layers.");
   params.addParam<std::vector<unsigned int>>(
       "no_emulator_neurons_per_layer", std::vector<unsigned int>(), "Number of neurons per layer.");
   params.addParam<std::vector<unsigned int>>(
       "no_control_neurons_per_layer", std::vector<unsigned int>(), "Number of neurons per layer.");
+  params.addParam<std::vector<std::string>>(
+      "emulator_activation_functions", std::vector<std::string>({"relu"}), "Number of neurons per layer.");
+  params.addParam<std::vector<std::string>>(
+      "control_activation_functions", std::vector<std::string>({"relu"}), "Number of neurons per layer.");
   params.addParam<std::string>(
       "filename", "net.pt", "Filename used to output the neural net parameters.");
   params.addParam<bool>("read_from_file",
@@ -56,32 +58,28 @@ LibtorchSimpleNNControlTrainer::LibtorchSimpleNNControlTrainer(const InputParame
     _control_names(getParam<std::vector<ReporterName>>("control_reporter")),
     _no_emulator_batches(getParam<unsigned int>("no_emulator_batches")),
     _no_emulator_epocs(getParam<unsigned int>("no_emulator_epocs")),
-    _no_emulator_hidden_layers(declareModelData<unsigned int>("no_emulator_hidden_layers")),
     _no_emulator_neurons_per_layer(
-        declareModelData<std::vector<unsigned int>>("no_emulator_neurons_per_layer")),
+        getParam<std::vector<unsigned int>>("no_emulator_neurons_per_layer")),
+    _emulator_activation_functions(
+        getParam<std::vector<std::string>>("emulator_activation_functions")),
     _emulator_learning_rate(getParam<Real>("emulator_learning_rate")),
     _no_control_epocs(getParam<unsigned int>("no_control_epocs")),
     _no_control_loops(getParam<unsigned int>("no_control_loops")),
-    _no_control_hidden_layers(declareModelData<unsigned int>("no_control_hidden_layers")),
     _no_control_neurons_per_layer(
-        declareModelData<std::vector<unsigned int>>("no_control_neurons_per_layer")),
+        getParam<std::vector<unsigned int>>("no_control_neurons_per_layer")),
+    _control_activation_functions(
+        getParam<std::vector<std::string>>("control_activation_functions")),
     _control_learning_rate(getParam<Real>("control_learning_rate")),
     _filename(getParam<std::string>("filename")),
     _read_from_file(getParam<bool>("read_from_file"))
 #ifdef TORCH_ENABLED
     ,
     _control_nn(
-        declareModelData<std::shared_ptr<StochasticTools::LibtorchSimpleNeuralNet>>("control_nn")),
+        declareModelData<std::shared_ptr<Moose::LibtorchArtificialNeuralNet>>("control_nn")),
     _emulator_nn(
         declareModelData<std::shared_ptr<StochasticTools::LibtorchSimpleNeuralNet>>("emulator_nn"))
 #endif
 {
-  if (_no_control_hidden_layers != _no_control_neurons_per_layer.size())
-    mooseError("The number of layers are not the same in the control neural net!");
-
-  if (_no_emulator_hidden_layers != _no_emulator_neurons_per_layer.size())
-    mooseError("The number of layers are not the same in the emulatr neural net!");
-
   if (_response_names.size() == 0)
     mooseError("The number of reponses reporters should be more than 0!");
 
@@ -101,9 +99,9 @@ LibtorchSimpleNNControlTrainer::LibtorchSimpleNNControlTrainer(const InputParame
   _control_nn =
       std::make_shared<StochasticTools::LibtorchSimpleNeuralNet>(_filename,
                                                                  2 * _response_names.size(),
-                                                                 _no_control_hidden_layers,
+                                                                 _control_names.size(),
                                                                  _no_control_neurons_per_layer,
-                                                                 _control_names.size());
+                                                                 _control_activation_functions);
   torch::save(_control_nn, _control_nn->name());
 #endif
 }
@@ -202,7 +200,7 @@ LibtorchSimpleNNControlTrainer::trainEmulator()
 
   // We create a neural net
   _emulator_nn = std::make_shared<StochasticTools::LibtorchSimpleNeuralNet>(
-      _filename, n_cols, _no_emulator_hidden_layers, _no_emulator_neurons_per_layer, n_responses);
+      _filename, n_cols, n_responses, _no_emulator_neurons_per_layer, _emulator_activation_functions);
 
   // Initialize the optimizer
   torch::optim::Adam optimizer(_emulator_nn->parameters(),

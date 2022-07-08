@@ -41,11 +41,10 @@ LibtorchNeuralNetControl::LibtorchNeuralNetControl(const InputParameters & param
 void
 LibtorchNeuralNetControl::execute()
 {
+  #ifdef LIBTORCH_ENABLED
   if (_nn != NULL)
   {
-
     unsigned int n_responses = _response_names.size();
-    unsigned int n_controls = _control_names.size();
 
     _current_response.clear();
     for (unsigned int resp_i = 0; resp_i < _response_names.size(); ++resp_i)
@@ -78,17 +77,20 @@ LibtorchNeuralNetControl::execute()
 
     _old_response = _current_response;
   }
+  #endif
 }
 
+#ifdef LIBTORCH_ENABLED
 void
 LibtorchNeuralNetControl::loadControlNeuralNet(
-    const std::shared_ptr<StochasticTools::LibtorchSimpleNeuralNet> & input_nn)
+    const std::shared_ptr<Moose::LibtorchArtificialNeuralNet> & input_nn)
 {
-  _nn = std::make_shared<StochasticTools::LibtorchSimpleNeuralNet>(input_nn->name(),
-                                                                   input_nn->noInputs(),
-                                                                   input_nn->noHiddenLayers(),
-                                                                   input_nn->noNeuronsPerLayer(),
-                                                                   input_nn->noOutputs());
+  _nn = std::make_shared<Moose::LibtorchArtificialNeuralNet>(input_nn->name(),
+                                                             input_nn->numInputs(),
+                                                             input_nn->numOutputs(),
+                                                             input_nn->numNeuronsPerLayer(),
+                                                             input_nn->activationNames());
 
   torch::load(_nn, input_nn->name());
 }
+#endif
