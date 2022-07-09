@@ -79,8 +79,8 @@ period = 0.25
   num_steps = 100
   dt = 0.0025
   solve_type = NEWTON
-  petsc_options_iname = '-pc_type -pc_hypre_type'
-  petsc_options_value = 'hypre boomeramg'
+  petsc_options_iname = '-pc_type'
+  petsc_options_value = 'lu'
   timestep_tolerance = 1e-6
   line_search = 'none'
 []

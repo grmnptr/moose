@@ -42,17 +42,15 @@
     control_reporter = 'results/control_value'
 
     # Parameters for the emulator neural net
-    no_emulator_epocs = 20000
-    no_emulator_batches = 2
-    no_emulator_hidden_layers = 3
-    no_emulator_neurons_per_layer = '64 32 16'
-    emulator_learning_rate = 0.0002
+    no_emulator_epocs = 4000
+    no_emulator_batches = 5
+    no_emulator_neurons_per_layer = '48 24'
+    emulator_learning_rate = 0.0001
 
     # Parameters for the control neural net
-    no_control_hidden_layers = 2
-    no_control_neurons_per_layer = '8 4'
-    control_learning_rate = 0.00025
-    no_control_epocs = 4000
+    no_control_neurons_per_layer = '10 5'
+    control_learning_rate = 0.0002
+    no_control_epocs = 500
     no_control_loops = 1
 
     # General data
@@ -87,7 +85,7 @@
 
 [Executioner]
   type = Transient
-  num_steps = 60 # Number of training iterations
+  num_steps = 200 # Number of training iterations
 []
 
 [Outputs]

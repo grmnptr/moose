@@ -66,7 +66,7 @@ LibtorchNeuralNetControl::execute()
     torch::Tensor output_tensor = _nn->forward(input_tensor);
 
     std::vector<Real> converted_output = {output_tensor.data_ptr<Real>(),
-                                          output_tensor.data_ptr<Real>() + output_tensor.size(1)};
+                                          output_tensor.data_ptr<Real>() + output_tensor.size(0)};
 
     for (unsigned int control_i = 0; control_i < _control_names.size(); ++control_i)
     {
@@ -85,11 +85,16 @@ void
 LibtorchNeuralNetControl::loadControlNeuralNet(
     const std::shared_ptr<Moose::LibtorchArtificialNeuralNet> & input_nn)
 {
+  std::vector<std::string> activation_names;
+  const MultiMooseEnum & activation_functions = input_nn->activationFunctions();
+  for (unsigned int i=0; i < activation_functions.size(); ++i)
+    activation_names.push_back(activation_functions[i]);
+
   _nn = std::make_shared<Moose::LibtorchArtificialNeuralNet>(input_nn->name(),
                                                              input_nn->numInputs(),
                                                              input_nn->numOutputs(),
                                                              input_nn->numNeuronsPerLayer(),
-                                                             input_nn->activationNames());
+                                                             activation_names);
 
   torch::load(_nn, input_nn->name());
 }

@@ -72,13 +72,6 @@ LibtorchSimpleNNControlTrainer::LibtorchSimpleNNControlTrainer(const InputParame
     _control_learning_rate(getParam<Real>("control_learning_rate")),
     _filename(getParam<std::string>("filename")),
     _read_from_file(getParam<bool>("read_from_file"))
-#ifdef TORCH_ENABLED
-    ,
-    _control_nn(
-        declareModelData<std::shared_ptr<Moose::LibtorchArtificialNeuralNet>>("control_nn")),
-    _emulator_nn(
-        declareModelData<std::shared_ptr<StochasticTools::LibtorchSimpleNeuralNet>>("emulator_nn"))
-#endif
 {
   if (_response_names.size() == 0)
     mooseError("The number of reponses reporters should be more than 0!");
@@ -90,18 +83,18 @@ LibtorchSimpleNNControlTrainer::LibtorchSimpleNNControlTrainer(const InputParame
     paramError("response_constraints",
                "The number of responses is not equal to the number of response constraints!");
 
-#ifdef TORCH_ENABLED
+#ifdef LIBTORCH_ENABLED
   // Fixing the RNG seed to make sure every experiment is the same.
   // Otherwise sampling / stochastic gradient descent would be different.
   torch::manual_seed(getParam<unsigned int>("seed"));
 
   // Initializing and saving the control neural net so that the control can grab it right away
   _control_nn =
-      std::make_shared<StochasticTools::LibtorchSimpleNeuralNet>(_filename,
-                                                                 2 * _response_names.size(),
-                                                                 _control_names.size(),
-                                                                 _no_control_neurons_per_layer,
-                                                                 _control_activation_functions);
+      std::make_shared<Moose::LibtorchArtificialNeuralNet>(_filename,
+                                                           2 * _response_names.size(),
+                                                           _control_names.size(),
+                                                           _no_control_neurons_per_layer,
+                                                           _control_activation_functions);
   torch::save(_control_nn, _control_nn->name());
 #endif
 }
@@ -170,7 +163,7 @@ void
 LibtorchSimpleNNControlTrainer::trainEmulator()
 {
 
-#ifdef TORCH_ENABLED
+#ifdef LIBTORCH_ENABLED
 
   // This gets us the number of timesteps
   auto no_steps = getReporterValueByName<std::vector<Real>>(_response_names[0]).size();
@@ -199,7 +192,7 @@ LibtorchSimpleNNControlTrainer::trainEmulator()
       std::move(data_set), sample_per_batch);
 
   // We create a neural net
-  _emulator_nn = std::make_shared<StochasticTools::LibtorchSimpleNeuralNet>(
+  _emulator_nn = std::make_shared<Moose::LibtorchArtificialNeuralNet>(
       _filename, n_cols, n_responses, _no_emulator_neurons_per_layer, _emulator_activation_functions);
 
   // Initialize the optimizer
@@ -244,7 +237,7 @@ void
 LibtorchSimpleNNControlTrainer::trainController()
 {
 
-#ifdef TORCH_ENABLED
+#ifdef LIBTORCH_ENABLED
 
   // We get the number of time steps
   auto no_steps = getReporterValueByName<std::vector<Real>>(_response_names[0]).size();
@@ -254,8 +247,8 @@ LibtorchSimpleNNControlTrainer::trainController()
   unsigned int n_controls = _control_names.size();
 
   // We create the controller neural net
-  _control_nn = std::make_shared<StochasticTools::LibtorchSimpleNeuralNet>(
-      _filename, n_cols, _no_control_hidden_layers, _no_control_neurons_per_layer, n_controls);
+  _control_nn = std::make_shared<Moose::LibtorchArtificialNeuralNet>(
+      _filename, n_cols, n_controls, _no_control_neurons_per_layer, _control_activation_functions);
 
   // Initialize the optimizer
   torch::optim::Adam optimizer(_control_nn->parameters(),

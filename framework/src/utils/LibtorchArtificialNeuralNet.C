@@ -79,7 +79,7 @@ LibtorchArtificialNeuralNet::forward(torch::Tensor x)
 
   x = _weights[_weights.size() - 1]->forward(x);
 
-  return x.reshape({x.size(0)});
+  return x;
 }
 
 void
