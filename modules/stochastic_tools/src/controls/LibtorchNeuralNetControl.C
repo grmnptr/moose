@@ -41,7 +41,7 @@ LibtorchNeuralNetControl::LibtorchNeuralNetControl(const InputParameters & param
 void
 LibtorchNeuralNetControl::execute()
 {
-  #ifdef LIBTORCH_ENABLED
+#ifdef LIBTORCH_ENABLED
   if (_nn != NULL)
   {
     unsigned int n_responses = _response_names.size();
@@ -77,7 +77,7 @@ LibtorchNeuralNetControl::execute()
 
     _old_response = _current_response;
   }
-  #endif
+#endif
 }
 
 #ifdef LIBTORCH_ENABLED
@@ -87,7 +87,7 @@ LibtorchNeuralNetControl::loadControlNeuralNet(
 {
   std::vector<std::string> activation_names;
   const MultiMooseEnum & activation_functions = input_nn->activationFunctions();
-  for (unsigned int i=0; i < activation_functions.size(); ++i)
+  for (unsigned int i = 0; i < activation_functions.size(); ++i)
     activation_names.push_back(activation_functions[i]);
 
   _nn = std::make_shared<Moose::LibtorchArtificialNeuralNet>(input_nn->name(),

@@ -33,10 +33,9 @@ public:
 
   virtual void execute() override;
 
-  #ifdef LIBTORCH_ENABLED
-  void
-  loadControlNeuralNet(const std::shared_ptr<Moose::LibtorchArtificialNeuralNet> & input_nn);
-  #endif
+#ifdef LIBTORCH_ENABLED
+  void loadControlNeuralNet(const std::shared_ptr<Moose::LibtorchArtificialNeuralNet> & input_nn);
+#endif
 
 private:
   std::vector<Real> _old_response;
@@ -48,10 +47,9 @@ private:
 
   std::vector<PostprocessorName> _response_names, _postprocessor_names;
 
-  #ifdef LIBTORCH_ENABLED
+#ifdef LIBTORCH_ENABLED
   /// Pointer to the neural net object which is supposed to be used to control
   /// the input values
   std::shared_ptr<Moose::LibtorchArtificialNeuralNet> _nn;
-  #endif
-
+#endif
 };

@@ -33,10 +33,12 @@ LibtorchSimpleNNControlTrainer::validParams()
       "no_emulator_neurons_per_layer", std::vector<unsigned int>(), "Number of neurons per layer.");
   params.addParam<std::vector<unsigned int>>(
       "no_control_neurons_per_layer", std::vector<unsigned int>(), "Number of neurons per layer.");
-  params.addParam<std::vector<std::string>>(
-      "emulator_activation_functions", std::vector<std::string>({"relu"}), "Number of neurons per layer.");
-  params.addParam<std::vector<std::string>>(
-      "control_activation_functions", std::vector<std::string>({"relu"}), "Number of neurons per layer.");
+  params.addParam<std::vector<std::string>>("emulator_activation_functions",
+                                            std::vector<std::string>({"relu"}),
+                                            "Number of neurons per layer.");
+  params.addParam<std::vector<std::string>>("control_activation_functions",
+                                            std::vector<std::string>({"relu"}),
+                                            "Number of neurons per layer.");
   params.addParam<std::string>(
       "filename", "net.pt", "Filename used to output the neural net parameters.");
   params.addParam<bool>("read_from_file",
@@ -89,12 +91,11 @@ LibtorchSimpleNNControlTrainer::LibtorchSimpleNNControlTrainer(const InputParame
   torch::manual_seed(getParam<unsigned int>("seed"));
 
   // Initializing and saving the control neural net so that the control can grab it right away
-  _control_nn =
-      std::make_shared<Moose::LibtorchArtificialNeuralNet>(_filename,
-                                                           2 * _response_names.size(),
-                                                           _control_names.size(),
-                                                           _no_control_neurons_per_layer,
-                                                           _control_activation_functions);
+  _control_nn = std::make_shared<Moose::LibtorchArtificialNeuralNet>(_filename,
+                                                                     2 * _response_names.size(),
+                                                                     _control_names.size(),
+                                                                     _no_control_neurons_per_layer,
+                                                                     _control_activation_functions);
   torch::save(_control_nn, _control_nn->name());
 #endif
 }
@@ -192,8 +193,12 @@ LibtorchSimpleNNControlTrainer::trainEmulator()
       std::move(data_set), sample_per_batch);
 
   // We create a neural net
-  _emulator_nn = std::make_shared<Moose::LibtorchArtificialNeuralNet>(
-      _filename, n_cols, n_responses, _no_emulator_neurons_per_layer, _emulator_activation_functions);
+  _emulator_nn =
+      std::make_shared<Moose::LibtorchArtificialNeuralNet>(_filename,
+                                                           n_cols,
+                                                           n_responses,
+                                                           _no_emulator_neurons_per_layer,
+                                                           _emulator_activation_functions);
 
   // Initialize the optimizer
   torch::optim::Adam optimizer(_emulator_nn->parameters(),
@@ -317,8 +322,8 @@ LibtorchSimpleNNControlTrainer::trainController()
         epoch_error = loss.item<double>();
       }
 
-      _console << "Controller training step: " << step_i << " (" << epoch_counter << ") | Loss: " << COLOR_GREEN
-               << epoch_error << COLOR_DEFAULT << std::endl;
+      _console << "Controller training step: " << step_i << " (" << epoch_counter
+               << ") | Loss: " << COLOR_GREEN << epoch_error << COLOR_DEFAULT << std::endl;
 
       // Build a new input tensor using the outputs
       for (unsigned int resp_i = 0; resp_i < n_responses; ++resp_i)

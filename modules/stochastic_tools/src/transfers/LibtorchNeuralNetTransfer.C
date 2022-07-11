@@ -37,7 +37,7 @@ LibtorchNeuralNetTransfer::LibtorchNeuralNetTransfer(const InputParameters & par
 void
 LibtorchNeuralNetTransfer::execute()
 {
-  #ifdef LIBTORCH_ENABLED
+#ifdef LIBTORCH_ENABLED
   // Selecting the appropriate action based on the drection.
   switch (_direction)
   {
@@ -65,5 +65,5 @@ LibtorchNeuralNetTransfer::execute()
 
       break;
   }
-  #endif
+#endif
 }
