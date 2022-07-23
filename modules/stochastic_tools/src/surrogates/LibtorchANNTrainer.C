@@ -151,7 +151,7 @@ LibtorchANNTrainer::postTrain()
   Moose::LibtorchDataset my_data(data_tensor, response_tensor);
 
   Moose::LibtorchArtificialNeuralNetTrainer trainer(_nn);
-  trainer.train(my_data, _optim_options);
+  trainer.train(my_data, _optim_options, comm());
 
 #endif
 }
