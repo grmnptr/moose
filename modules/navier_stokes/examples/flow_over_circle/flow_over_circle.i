@@ -1,20 +1,22 @@
+refinement=6
 mu=3.2215e-3
 rho=1
-velocity_interp_method = 'rc'
-advected_interp_method = 'upwind'
+inlet_velocity=1
+velocity_interp_method='rc'
+advected_interp_method='upwind'
 
 [GlobalParams]
   rhie_chow_user_object = 'rc'
 []
+
 [Mesh]
   [ccmg]
     type = ConcentricCircleMeshGenerator
-    num_sectors = 6
+    num_sectors = ${fparse refinement*2}
     radii = '0.2546 0.3368'
-    rings = '4 3 4'
+    rings = '4 ${fparse 2*refinement} ${refinement}'
     has_outer_square = on
     pitch = 1
-    #portion = left_half
     preserve_volumes = off
     smoothing_max_it = 3
   []
@@ -23,7 +25,7 @@ advected_interp_method = 'upwind'
     input = ccmg
     primary_block = 2
     paired_block = 1
-    new_boundary = 'no_circle'
+    new_boundary = 'circle'
   []
   [delete]
     type = BlockDeletionGenerator
@@ -39,22 +41,22 @@ advected_interp_method = 'upwind'
   [left]
     type = GeneratedMeshGenerator
     dim = 2
-    xmin = -4.5
+    xmin = -1.5
     xmax = -0.5
     ymin = -0.5
     ymax = 0.5
-    nx = '80'
-    ny = '16'
+    nx = ${fparse refinement*5}
+    ny = ${fparse refinement*4+2}
   []
   [right]
     type = GeneratedMeshGenerator
+    dim = 2
     xmin = 0.5
     xmax = 4.5
     ymin = -0.5
     ymax = 0.5
-    nx = '80'
-    ny = '16'
-    dim = 2
+    nx = ${fparse refinement*20}
+    ny = ${fparse refinement*4+2}
   []
   [stitch_left]
     type = StitchedMeshGenerator
@@ -84,33 +86,33 @@ advected_interp_method = 'upwind'
 
   [top_left_block]
     type = GeneratedMeshGenerator
-    xmin = -4.5
+    dim = 2
+    xmin = -1.5
     xmax = -0.5
     ymin = 0.5
     ymax = ${fparse 0.5 + 2. / 16.}
-    nx = 80
-    ny = 2
-    dim = 2
+    nx = ${fparse refinement*5}
+    ny = ${fparse ceil(refinement/2)}
   []
   [top_middle_block]
     type = GeneratedMeshGenerator
+    dim = 2
     xmin = -0.5
     xmax = 0.5
     ymin = 0.5
     ymax = ${fparse 0.5 + 2. / 16.}
-    nx = 16
-    ny = 2
-    dim = 2
+    nx = ${fparse refinement*4+2}
+    ny = ${fparse ceil(refinement/2)}
   []
   [top_right_block]
     type = GeneratedMeshGenerator
+    dim = 2
     xmin = 0.5
     xmax = 4.5
     ymin = 0.5
     ymax = ${fparse 0.5 + 2. / 16.}
-    nx = 80
-    ny = 2
-    dim = 2
+    nx = ${fparse refinement*20}
+    ny = ${fparse ceil(refinement/2)}
   []
   [stitch_top_left]
     type = StitchedMeshGenerator
@@ -144,7 +146,7 @@ advected_interp_method = 'upwind'
   [create_fused_left_sideset]
     input = create_fused_top_sideset
     type = ParsedGenerateSideset
-    combinatorial_geometry = 'x < -4.499999'
+    combinatorial_geometry = 'x < -1.499999'
     normal = '-1 0 0'
     new_sideset_name = 'left_boundary'
   []
@@ -155,7 +157,6 @@ advected_interp_method = 'upwind'
     normal = '1 0 0'
     new_sideset_name = 'right_boundary'
   []
-  uniform_refine = 2
 []
 
 [UserObjects]
@@ -183,7 +184,6 @@ advected_interp_method = 'upwind'
 []
 
 [FVKernels]
-  # mass
   [mass]
     type = INSFVMassAdvection
     variable = pressure
@@ -214,8 +214,8 @@ advected_interp_method = 'upwind'
   [u_pressure]
     type = INSFVMomentumPressure
     variable = vel_x
-    momentum_component = 'x'
     pressure = pressure
+    momentum_component = 'x'
   []
   [v_time]
     type = INSFVMomentumTimeDerivative
@@ -240,29 +240,17 @@ advected_interp_method = 'upwind'
   [v_pressure]
     type = INSFVMomentumPressure
     variable = vel_y
-    momentum_component = 'y'
     pressure = pressure
+    momentum_component = 'y'
   []
 []
 
 [FVBCs]
-  [no_slip_x]
-    type = INSFVNoSlipWallBC
-    variable = vel_x
-    boundary = 'top_boundary bottom_boundary no_circle'
-    function = 0
-  []
-  [no_slip_y]
-    type = INSFVNoSlipWallBC
-    variable = vel_y
-    boundary = 'top_boundary bottom_boundary no_circle'
-    function = 0
-  []
   [inlet_x]
     type = INSFVInletVelocityBC
     variable = vel_x
     boundary = 'left_boundary'
-    function = inlet_func
+    function = ${inlet_velocity}
   []
   [inlet_y]
     type = INSFVInletVelocityBC
@@ -270,6 +258,31 @@ advected_interp_method = 'upwind'
     boundary = 'left_boundary'
     function = 0
   []
+  [circle_x]
+    type = INSFVNoSlipWallBC
+    variable = vel_x
+    boundary = 'circle'
+    function = 0
+  []
+  [circle_y]
+    type = INSFVNoSlipWallBC
+    variable = vel_y
+    boundary = 'circle'
+    function = 0
+  []
+  [walls_x]
+    type = INSFVNaturalFreeSlipBC
+    variable = vel_x
+    boundary = 'top_boundary bottom_boundary'
+    momentum_component = 'x'
+  []
+  [walls_y]
+    type = INSFVNaturalFreeSlipBC
+    variable = vel_y
+    boundary = 'top_boundary bottom_boundary'
+    momentum_component = 'y'
+  []
+
   [outlet_p]
     type = INSFVOutletPressureBC
     variable = pressure
@@ -278,45 +291,23 @@ advected_interp_method = 'upwind'
   []
 []
 
-[Functions]
-  [inlet_func]
-    type = ParsedFunction
-    value = '-1'
-  []
-[]
-
-[Materials]
-  [const]
-    type = GenericConstantMaterial
-    prop_names = 'rho mu'
-    prop_values = '${rho}  ${mu}'
-  []
-[]
-
-[Preconditioning]
-  [SMP]
-    type = SMP
-    full = true
-    solve_type = 'NEWTON'
-  []
-[]
-
 [Executioner]
   type = Transient
-  dtmin = 1e-5
-  petsc_options = '-snes_converged_reason -ksp_converged_reason'
+  solve_type = 'NEWTON'
   petsc_options_iname = '-pc_type'
   petsc_options_value = 'lu'
+  petsc_options = '-snes_converged_reason -ksp_converged_reason'
   line_search = 'none'
   nl_rel_tol = 1e-8
-  nl_abs_tol = 1e-12
+  nl_abs_tol = 1e-10
   nl_max_its = 10
   end_time = 15
-  dtmax = 1
+  dtmax = 1e-1
+  dtmin = 1e-5
   scheme = 'bdf2'
   [TimeStepper]
     type = IterationAdaptiveDT
-    dt = 1e-5
+    dt = 1e-4
     optimal_iterations = 6
     growth_factor = 1.5
   []
@@ -333,45 +324,45 @@ advected_interp_method = 'upwind'
     type = ParsedPostprocessor
     function = 'rho * U * D / mu'
     constant_names = 'rho U D mu'
-    constant_expressions = '${rho} 1 ${fparse 2 * .2546} ${mu}'
+    constant_expressions = '${rho} ${inlet_velocity} ${fparse 2 * .2546} ${mu}'
     pp_names = ''
   []
   [Strouhal_Number]
     type = ParsedPostprocessor
     function = '0.198*(1-(19.7/(rho*U*D/mu)))'
     constant_names = 'rho U D mu'
-    constant_expressions = '${rho} 1 ${fparse 2 * .2546} ${mu}'
+    constant_expressions = '${rho} ${inlet_velocity} ${fparse 2 * .2546} ${mu}'
     pp_names = ''
   []
   [St_PVS]
     type = ParsedPostprocessor
     function = '.285 + (-1.3897/sqrt(rho*U*D/mu)) + 1.8061/(rho*U*D/mu)'
     constant_names = 'rho U D mu'
-    constant_expressions = '${rho} 1 ${fparse 2 * .2546} ${mu}'
+    constant_expressions = '${rho} ${inlet_velocity} ${fparse 2 * .2546} ${mu}'
     pp_names = ''
   []
   [Frequency]
     type = ParsedPostprocessor
     function = '((0.198*U)/D)*(1-(19.7/(rho*U*D/mu)))'
     constant_names = 'rho U D mu'
-    constant_expressions = '${rho} 1 ${fparse 2 * .2546} ${mu}'
+    constant_expressions = '${rho} ${inlet_velocity} ${fparse 2 * .2546} ${mu}'
     pp_names = ''
   []
   [Frequency_PVS]
     type = ParsedPostprocessor
     function = 'St_PVS*U/D'
     constant_names = 'U D'
-    constant_expressions = '1 ${fparse 2 * .2546}'
+    constant_expressions = '${inlet_velocity} ${fparse 2 * .2546}'
     pp_names = 'St_PVS'
   []
   [element_44146_x]
     type = ElementalVariableValue
     variable = 'vel_x'
-    elementid = 44146
+    elementid = 21082
   []
   [element_44146_y]
     type = ElementalVariableValue
     variable = 'vel_y'
-    elementid = 44146
+    elementid = 21082
   []
 []
