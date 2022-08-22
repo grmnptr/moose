@@ -1,7 +1,7 @@
-mu=4e-3
-rho=1
+mu = 4e-3
+rho = 1
 velocity_interp_method = 'rc'
-advected_interp_method = 'average'
+advected_interp_method = 'upwind'
 
 [GlobalParams]
   rhie_chow_user_object = 'rc'
@@ -153,32 +153,25 @@ advected_interp_method = 'average'
 []
 
 [Functions]
-  [./inlet_func]
+  [inlet_func]
     type = ParsedFunction
     value = 'sqrt((x-2)^2 * (x+2)^2 * (y-2)^2 * (y+2)^2) / 16'
-  [../]
+  []
 []
 
 [Materials]
-  [./const]
+  [const]
     type = GenericConstantMaterial
     prop_names = 'rho mu'
     prop_values = '${rho}  ${mu}'
-  [../]
-[]
-
-[Preconditioning]
-  [./SMP] #What is PJFNK
-    type = SMP
-    full = true
-    solve_type = 'NEWTON'
-  [../]
+  []
 []
 
 [Executioner]
   type = Transient
-  dt = .5
-  dtmin = 5e-4
+  solve_type = 'NEWTON'
+  dtmax = 1e-1
+  dtmin = 1e-5
   num_steps = 5
   petsc_options = '-snes_converged_reason -ksp_converged_reason'
   petsc_options_iname = '-pc_type'
@@ -189,13 +182,19 @@ advected_interp_method = 'average'
   nl_max_its = 10
   l_tol = 1e-6
   l_max_its = 250
+  [TimeStepper]
+    type = IterationAdaptiveDT
+    dt = 1e-4
+    optimal_iterations = 6
+    growth_factor = 1.5
+  []
 []
 
 [Outputs]
-    execute_on = 'timestep_end initial'
-    print_perf_log = true
-    exodus = true
-    csv = true
+  execute_on = 'timestep_end initial'
+  print_perf_log = true
+  exodus = true
+  csv = true
 []
 [Postprocessors]
   [Re]
