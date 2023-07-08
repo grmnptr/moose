@@ -53,4 +53,13 @@
     point = '${fparse (x_max-x_min)/2} ${fparse (y_max-y_min)/2} 0'
     variable = 'vel_y'
   []
+  [drag]
+    type = DragForce
+    vel_x = vel_x
+    vel_y = vel_y
+    mu = ${mu}
+    pressure = pressure
+    principal_direction = '1 0 0'
+    boundary = 'circle'
+  []
 []

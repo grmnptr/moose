@@ -7,21 +7,21 @@
 //* Licensed under LGPL 2.1, please see LICENSE for details
 //* https://www.gnu.org/licenses/lgpl-2.1.html
 
-#include "DragCoefficient.h"
+#include "DragForce.h"
 #include "MathFVUtils.h"
 #include "NSFVUtils.h"
 #include "NS.h"
 
 #include <cmath>
 
-registerMooseObject("NavierStokesApp", DragCoefficient);
+registerMooseObject("NavierStokesApp", DragForce);
 
 InputParameters
-DragCoefficient::validParams()
+DragForce::validParams()
 {
   InputParameters params = SideIntegralPostprocessor::validParams();
   params.addClassDescription(
-      "Computes the drag coefficient on a surface. Depending on the principal direction, one can "
+      "Computes the drag force on a surface. Depending on the principal direction, one can "
       "use this object for the computation of the lift coefficient as well.");
   params.addRequiredParam<MooseFunctorName>("vel_x", "The velocity in direction x.");
   params.addParam<MooseFunctorName>("vel_y", "The velocity in direction y.");
@@ -34,7 +34,7 @@ DragCoefficient::validParams()
   return params;
 }
 
-DragCoefficient::DragCoefficient(const InputParameters & parameters)
+DragForce::DragForce(const InputParameters & parameters)
   : SideIntegralPostprocessor(parameters),
     _vel_x(getFunctor<Real>("vel_x")),
     _vel_y(isParamValid("vel_y") ? &getFunctor<Real>("vel_y") : nullptr),
@@ -43,13 +43,14 @@ DragCoefficient::DragCoefficient(const InputParameters & parameters)
     _pressure(getFunctor<Real>(NS::pressure)),
     _direction(getParam<RealVectorValue>("principal_direction"))
 {
-  _qp_integration = !getFieldVar("vel_x", 0)->isFV();
-  if (_qp_integration)
-    mooseError("Drag coefficient computation is only supported for finite volume variables!");
+  // _qp_integration = !getFieldVar("vel_x", 0)->isFV();
+  // if (_qp_integration)
+  //   mooseError("Drag coefficient computation is only supported for finite volume variables!");
+  _qp_integration = false;
 }
 
 Real
-DragCoefficient::computeFaceInfoIntegral(const FaceInfo * fi)
+DragForce::computeFaceInfoIntegral(const FaceInfo * fi)
 {
   mooseAssert(fi, "We should have a face info in " + name());
   const auto state = determineState();
@@ -72,6 +73,7 @@ DragCoefficient::computeFaceInfoIntegral(const FaceInfo * fi)
     const auto & grad_u = _vel_x.gradient(face_arg, state);
     const auto & grad_v = _vel_y->gradient(face_arg, state);
     velocity_gradient = RealTensorValue(grad_u, grad_v);
+    pressure_term(0, 0) = -pressure;
     pressure_term(1, 1) = -pressure;
   }
   else // if (_dim == 3)
@@ -80,6 +82,8 @@ DragCoefficient::computeFaceInfoIntegral(const FaceInfo * fi)
     const auto & grad_v = _vel_y->gradient(face_arg, state);
     const auto & grad_w = _vel_z->gradient(face_arg, state);
     velocity_gradient = RealTensorValue(grad_u, grad_v, grad_w);
+    pressure_term(0, 0) = -pressure;
+    pressure_term(1, 1) = -pressure;
     pressure_term(2, 2) = -pressure;
   }
 
@@ -88,7 +92,7 @@ DragCoefficient::computeFaceInfoIntegral(const FaceInfo * fi)
 }
 
 Real
-DragCoefficient::computeQpIntegral()
+DragForce::computeQpIntegral()
 {
   return 0.0;
 }

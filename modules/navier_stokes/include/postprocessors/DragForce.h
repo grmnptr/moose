@@ -14,19 +14,19 @@
 #include "MathFVUtils.h"
 
 /**
- * This postprocessor which computes the drag coefficient on a surface
+ * This postprocessor which computes the drag force on a surface
  * defined as:
  *
  * $C_D = \int\limits_S (\sigma \vec{n}) \cdot \vec{e} dS$
  *
  * where $\sigma$ is the Cauchy stress tensor
  */
-class DragCoefficient : public SideIntegralPostprocessor
+class DragForce : public SideIntegralPostprocessor
 {
 public:
   static InputParameters validParams();
 
-  DragCoefficient(const InputParameters & parameters);
+  DragForce(const InputParameters & parameters);
 
 protected:
   Real computeFaceInfoIntegral(const FaceInfo * fi) override;
