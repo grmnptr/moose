@@ -11,6 +11,7 @@
 #include "MathFVUtils.h"
 #include "NSFVUtils.h"
 #include "NS.h"
+#include "MooseFunctorArguments.h"
 
 #include <cmath>
 
@@ -57,15 +58,23 @@ DragForce::computeFaceInfoIntegral(const FaceInfo * fi)
   const auto face_arg =
       Moose::FaceArg({fi, Moose::FV::LimiterType::CentralDifference, true, false, nullptr});
 
+  const auto elem_arg = Moose::ElemArg({fi->elemPtr(), false});
+
   RealTensorValue velocity_gradient;
   RealTensorValue pressure_term;
+  RealTensorValue normal_term;
   Real pressure = _pressure(face_arg, state);
   Real mu = _mu(face_arg, state);
+  RealVectorValue cell_velocity = 0;
+  RealVectorValue face_velocity = 0;
   if (_mesh.dimension() == 1)
   {
     const auto & grad_u = _vel_x.gradient(face_arg, state);
     velocity_gradient = RealTensorValue(grad_u);
     pressure_term(0, 0) = -pressure;
+    normal_term(0, 0) = 1;
+    cell_velocity(0) = _vel_x(elem_arg, state);
+    face_velocity(0) = _vel_x(face_arg, state);
   }
   else if (_mesh.dimension() == 2)
   {
@@ -75,6 +84,12 @@ DragForce::computeFaceInfoIntegral(const FaceInfo * fi)
     velocity_gradient = RealTensorValue(grad_u, grad_v);
     pressure_term(0, 0) = -pressure;
     pressure_term(1, 1) = -pressure;
+    normal_term(0, 0) = 1;
+    normal_term(1, 1) = 1;
+    cell_velocity(0) = _vel_x(elem_arg, state);
+    cell_velocity(1) = (*_vel_y)(elem_arg, state);
+    face_velocity(0) = _vel_x(face_arg, state);
+    face_velocity(1) = (*_vel_y)(face_arg, state);
   }
   else // if (_dim == 3)
   {
@@ -85,10 +100,36 @@ DragForce::computeFaceInfoIntegral(const FaceInfo * fi)
     pressure_term(0, 0) = -pressure;
     pressure_term(1, 1) = -pressure;
     pressure_term(2, 2) = -pressure;
+    normal_term(0, 0) = 1;
+    normal_term(1, 1) = 1;
+    normal_term(2, 2) = 1;
+    cell_velocity(0) = _vel_x(elem_arg, state);
+    cell_velocity(1) = (*_vel_y)(elem_arg, state);
+    cell_velocity(2) = (*_vel_z)(elem_arg, state);
+    face_velocity(0) = _vel_x(face_arg, state);
+    face_velocity(1) = (*_vel_y)(face_arg, state);
+    face_velocity(2) = (*_vel_z)(face_arg, state);
   }
 
-  return (mu * (velocity_gradient + velocity_gradient.transpose()) + pressure_term) * fi->normal() *
-         _direction;
+  auto sheer_force = -mu *
+                     (cell_velocity - face_velocity -
+                      (cell_velocity - face_velocity) * fi->normal() * fi->normal()) /
+                     std::abs(fi->dCN() * fi->normal());
+
+  // auto normal_tensor = normal_term - libMesh::outer_product(fi->normal(), fi->normal());
+  // auto normal_gradient = ((velocity_gradient + velcoity_gradient.transpose()) * normal_tensor);
+
+  // Real value = 0;
+  // if (std::abs(_direction(0)) == 1)
+  //   value = (mu * (velocity_gradient) + pressure_term) * fi->normal() * _direction;
+  // else
+  //   value = (mu * velocity_gradient.transpose() + pressure_term) * fi->normal() * _direction;
+
+  // return (mu * (velocity_gradient + velocity_gradient.transpose()) + pressure_term) *
+  // fi->normal() *
+  //        _direction;
+
+  return (sheer_force * _direction + pressure_term * fi->normal() * _direction);
 }
 
 Real

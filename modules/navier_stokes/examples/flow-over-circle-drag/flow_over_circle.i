@@ -106,14 +106,36 @@ velocity_interp_method = 'rc'
   [circle_x]
     type = INSFVNoSlipWallBC
     variable = vel_x
-    boundary = 'circle jets'
+    boundary = 'circle'
     function = 0
   []
   [circle_y]
     type = INSFVNoSlipWallBC
     variable = vel_y
-    boundary = 'circle jets'
+    boundary = 'circle'
     function = 0
+  []
+  [jets_x]
+    type = INSFVCylinderJetControlBC
+    variable = vel_x
+    boundary = 'jets'
+    mass_flow = 0.0
+    angle = 10
+    locations = '90 270'
+    origin = '0 0 0'
+    radius = 0.5
+    momentum_component = x
+  []
+  [jets_y]
+    type = INSFVCylinderJetControlBC
+    variable = vel_y
+    boundary = 'jets'
+    mass_flow = 0.0
+    angle = 10
+    locations = '90 270'
+    origin = '0 0 0'
+    radius = 0.5
+    momentum_component = y
   []
   [walls_x]
     type = INSFVNoSlipWallBC

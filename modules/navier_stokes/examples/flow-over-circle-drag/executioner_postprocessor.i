@@ -1,16 +1,16 @@
 [Functions]
-  # [inlet_function]
-  #   type = ParsedFunction
-  #   expression = '4*U*(y-ymin)*(ymax-y)/(ymax-ymin)/(ymax-ymin)'
-  #   symbol_names = 'U ymax ymin'
-  #   symbol_values = '${inlet_velocity} ${y_max} ${y_min}'
-  # []
   [inlet_function]
     type = ParsedFunction
-    expression = '6*((ymax-ymin)/2-y)*((ymax-ymin)/2+y)/((ymax-ymin)*(ymax-ymin))'
-    symbol_names = 'ymax ymin'
-    symbol_values = '${y_max} ${y_min}'
+    expression = '4*U*(y-ymin)*(ymax-y)/(ymax-ymin)/(ymax-ymin)'
+    symbol_names = 'U ymax ymin'
+    symbol_values = '${inlet_velocity} ${y_max} ${y_min}'
   []
+#   [inlet_function]
+#     type = ParsedFunction
+#     expression = '6*((ymax-ymin)/2-y)*((ymax-ymin)/2+y)/((ymax-ymin)*(ymax-ymin))'
+#     symbol_names = 'ymax ymin'
+#     symbol_values = '${y_max} ${y_min}'
+#   []
 []
 
 # [Problem]
@@ -60,6 +60,7 @@
   nl_max_its = 10
   end_time = 60
   dtmax = 1e-2
+  timestep_tolerance = 1e-10
   scheme = 'bdf2'
 []
 
@@ -98,7 +99,8 @@
     mu = ${mu}
     pressure = pressure
     principal_direction = '-1 0 0'
-    boundary = 'circle'
+    boundary = 'circle jets'
+    outputs = none
   []
   [drag_coeff]
     type = ParsedPostprocessor
@@ -106,5 +108,22 @@
     constant_names = 'rho avgvel D'
     constant_expressions = '${rho} ${fparse 2/3*inlet_velocity} ${fparse 2*circle_radius}'
     pp_names = 'drag_force'
+  []
+  [lift_force]
+    type = DragForce
+    vel_x = vel_x
+    vel_y = vel_y
+    mu = ${mu}
+    pressure = pressure
+    principal_direction = '0 -1 0'
+    boundary = 'circle jets'
+    outputs = none
+  []
+  [lift_coeff]
+    type = ParsedPostprocessor
+    function = '2*lift_force/rho/(avgvel*avgvel)/D'
+    constant_names = 'rho avgvel D'
+    constant_expressions = '${rho} ${fparse 2/3*inlet_velocity} ${fparse 2*circle_radius}'
+    pp_names = 'lift_force'
   []
 []

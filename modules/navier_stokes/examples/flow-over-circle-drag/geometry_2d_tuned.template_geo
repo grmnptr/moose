@@ -7,10 +7,10 @@ bottom_distance = {2, Name "Cylinder center distance from bottom"}
 jet_radius = {0.5, Name "Cylinder radius"}
 jet_width = {10*Pi/180, Name "Jet width in radians"}
 width = {4.1, Name "Channel width"}
-cylinder_size = {0.015, Name "Mesh size on cylinder"}
-box_size = {0.15, Name "Mesh size on wall"}
+cylinder_size = {0.012, Name "Mesh size on cylinder"}
+box_size = {0.25, Name "Mesh size on wall"}
 coarse_size = {0.5, Name "Mesh size close to the outflow"}
-coarse_distance = {2.5, Name "Distance from the cylinder where coarsening starts"}
+coarse_distance = {3, Name "Distance from the cylinder where coarsening starts"}
 ];
 
 // Seed the cylinder
