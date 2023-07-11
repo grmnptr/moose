@@ -23,7 +23,6 @@ LibtorchLiftDragControl::validParams()
   params.addClassDescription("Bazinga.");
   params.addRequiredParam<Real>("time_delay", "basinga");
   params.addRequiredParam<Real>("ramp", "basinga");
-  params.addRequiredParam<Real>("ramp_time", "basinga");
 
   return params;
 }
@@ -31,8 +30,7 @@ LibtorchLiftDragControl::validParams()
 LibtorchLiftDragControl::LibtorchLiftDragControl(const InputParameters & parameters)
   : LibtorchDRLControl(parameters),
     _time_delay(getParam<Real>("time_delay")),
-    _switched_time(_t),
-    _ramp_time(getParam<Real>("ramp_time")),
+    _switch_time(_t),
     _ramp(getParam<Real>("ramp"))
 {
 }
@@ -70,22 +68,20 @@ LibtorchLiftDragControl::execute()
       _action_tensor = at::normal(output_tensor, _std);
 
       // Compute log probability
-      _log_probability_tensor = computeLogProbability(action, output_tensor);
+      _log_probability_tensor = computeLogProbability(_action_tensor, output_tensor);
 
       _switch_time = _t;
     }
 
-    std::vector<Real> action_signal = {action.data_ptr<Real>(),
-                                       action.data_ptr<Real>() + action.size(1)};
+    std::vector<Real> action_signal = {_action_tensor.data_ptr<Real>(),
+                                       _action_tensor.data_ptr<Real>() + _action_tensor.size(1)};
     // Convert data
     std::transform(_current_control_signals.cbegin(),
                    _current_control_signals.cend(),
                    action_signal.cbegin(),
                    _current_control_signals.begin(),
-                   [this](const & Real signal, const & Real action) {
-                     return (_t > _switch_time + _relax_time) ? action
-                                                              : signal + _ramp * (action - signal);
-                   });
+                   [this](const Real & signal, const Real & action)
+                   { return signal + _ramp * (action - signal); });
 
     _current_control_signal_log_probabilities = {_log_probability_tensor.data_ptr<Real>(),
                                                  _log_probability_tensor.data_ptr<Real>() +

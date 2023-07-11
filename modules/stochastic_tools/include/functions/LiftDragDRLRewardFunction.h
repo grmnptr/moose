@@ -28,6 +28,6 @@ protected:
   const PostprocessorValue & _observed_lift;
 
   const unsigned int _avg_interval;
-  std::vector<Real> _drag_history;
-  std::vector<Real> _lift_history;
+  mutable std::vector<Real> _drag_history;
+  mutable std::vector<Real> _lift_history;
 };

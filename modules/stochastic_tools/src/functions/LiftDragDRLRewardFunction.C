@@ -33,8 +33,7 @@ LiftDragDRLRewardFunction::LiftDragDRLRewardFunction(const InputParameters & par
   : Function(parameters),
     _observed_drag(getPostprocessorValueByName(getParam<PostprocessorName>("drag_pp"))),
     _observed_lift(getPostprocessorValueByName(getParam<PostprocessorName>("lift_pp"))),
-    _avg_interval(getParam<unsigned int>("smoothing_interval")),
-    _c2(getParam<Real>("c2"))
+    _avg_interval(getParam<unsigned int>("smoothing_interval"))
 {
 }
 
@@ -44,7 +43,7 @@ LiftDragDRLRewardFunction::value(Real /*t*/, const Point & /*p*/) const
   _drag_history.push_back(_observed_drag);
   _lift_history.push_back(_observed_lift);
 
-  auto num_history(std::min(_avg_interval, _drag_history.size()));
+  auto num_history(std::min(_avg_interval, (unsigned int)_drag_history.size()));
 
   Real sum_drag = std::transform_reduce(_drag_history.cend() - num_history,
                                         _drag_history.cend(),
@@ -64,12 +63,12 @@ LiftDragDRLRewardFunction::value(Real /*t*/, const Point & /*p*/) const
 }
 
 ADReal
-LiftDragDRLRewardFunction::value(const ADReal & t, const ADPoint & p) const
+LiftDragDRLRewardFunction::value(const ADReal & /*t*/, const ADPoint & /*p*/) const
 {
   _drag_history.push_back(_observed_drag);
   _lift_history.push_back(_observed_lift);
 
-  auto num_history(std::min(_avg_interval, _drag_history.size()));
+  auto num_history(std::min(_avg_interval, (unsigned int)_drag_history.size()));
 
   Real sum_drag = std::transform_reduce(_drag_history.cend() - num_history,
                                         _drag_history.cend(),

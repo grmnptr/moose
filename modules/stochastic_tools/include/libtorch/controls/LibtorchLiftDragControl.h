@@ -19,8 +19,7 @@ protected:
   std::vector<Real> _current_valid_control_values;
 
   const Real _time_delay;
-  Real _switched_time;
-  Real _relax_time;
+  Real _switch_time;
   const Real _ramp;
 
   torch::Tensor _action_tensor;

@@ -64,6 +64,7 @@ ifeq ($(NAVIER_STOKES),yes)
         FLUID_PROPERTIES            := yes
         HEAT_CONDUCTION             := yes
         RDG                         := yes
+        STOCHASTIC_TOOLS            := yes
 endif
 
 ifeq ($(SOLID_PROPERTIES),yes)
@@ -239,7 +240,7 @@ endif
 ifeq ($(NAVIER_STOKES),yes)
   APPLICATION_DIR    := $(MOOSE_DIR)/modules/navier_stokes
   APPLICATION_NAME   := navier_stokes
-  DEPEND_MODULES     := fluid_properties rdg heat_conduction
+  DEPEND_MODULES     := fluid_properties rdg heat_conduction stochastic_tools
   SUFFIX             := ns
   include $(FRAMEWORK_DIR)/app.mk
 endif
