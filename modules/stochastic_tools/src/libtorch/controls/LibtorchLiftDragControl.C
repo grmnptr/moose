@@ -29,6 +29,7 @@ LibtorchLiftDragControl::validParams()
 
 LibtorchLiftDragControl::LibtorchLiftDragControl(const InputParameters & parameters)
   : LibtorchDRLControl(parameters),
+    _current_valid_control_values(std::vector<Real>(_control_names.size(), 0.0)),
     _time_delay(getParam<Real>("time_delay")),
     _switch_time(_t),
     _ramp(getParam<Real>("ramp"))
@@ -71,27 +72,27 @@ LibtorchLiftDragControl::execute()
       _log_probability_tensor = computeLogProbability(_action_tensor, output_tensor);
 
       _switch_time = _t;
-    }
 
-    std::vector<Real> action_signal = {_action_tensor.data_ptr<Real>(),
-                                       _action_tensor.data_ptr<Real>() + _action_tensor.size(1)};
+      _current_control_signal_log_probabilities = {_log_probability_tensor.data_ptr<Real>(),
+                                                   _log_probability_tensor.data_ptr<Real>() +
+                                                       _log_probability_tensor.size(1)};
+
+      _current_control_signals = {_action_tensor.data_ptr<Real>(),
+                                  _action_tensor.data_ptr<Real>() + _action_tensor.size(1)};
+    }
     // Convert data
-    std::transform(_current_control_signals.cbegin(),
-                   _current_control_signals.cend(),
-                   action_signal.cbegin(),
-                   _current_control_signals.begin(),
+    std::transform(_current_valid_control_values.cbegin(),
+                   _current_valid_control_values.cend(),
+                   _current_control_signals.cbegin(),
+                   _current_valid_control_values.begin(),
                    [this](const Real & signal, const Real & action)
                    { return signal + _ramp * (action - signal); });
-
-    _current_control_signal_log_probabilities = {_log_probability_tensor.data_ptr<Real>(),
-                                                 _log_probability_tensor.data_ptr<Real>() +
-                                                     _log_probability_tensor.size(1)};
 
     for (unsigned int control_i = 0; control_i < n_controls; ++control_i)
     {
       // We scale the controllable value for physically meaningful control action
       setControllableValueByName<Real>(_control_names[control_i],
-                                       _current_control_signals[control_i] *
+                                       _current_valid_control_values[control_i] *
                                            _action_scaling_factors[control_i]);
     }
 
