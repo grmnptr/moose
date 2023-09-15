@@ -107,7 +107,12 @@ SteadySolve2::execute()
       return _problem.nlConverged(sys_num);
     };
 
-    const bool converged = solve(_first_nl_sys) && solve(_second_nl_sys);
+    bool converged = true;
+
+    for (unsigned int i = 0; i < 1; i++)
+    {
+      converged = converged && solve(_first_nl_sys) && solve(_second_nl_sys);
+    }
 
     if (!converged)
     {

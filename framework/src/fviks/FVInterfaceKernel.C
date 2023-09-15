@@ -98,17 +98,29 @@ FVInterfaceKernel::FVInterfaceKernel(const InputParameters & parameters)
     ADFunctorInterface(this),
     _tid(getParam<THREAD_ID>("_tid")),
     _subproblem(*getCheckedPointerParam<SubProblem *>("_subproblem")),
-    _sys(*getCheckedPointerParam<SystemBase *>("_sys")),
-    _assembly(_subproblem.assembly(_tid, _sys.number())),
-    _var1(_sys.getFVVariable<Real>(_tid, getParam<NonlinearVariableName>("variable1"))),
-    _var2(_sys.getFVVariable<Real>(_tid,
-                                   isParamValid("variable2")
-                                       ? getParam<NonlinearVariableName>("variable2")
-                                       : getParam<NonlinearVariableName>("variable1"))),
+    _sys1(_subproblem.getVariable(_tid, getParam<NonlinearVariableName>("variable1")).sys()),
+    _sys2(_subproblem
+              .getVariable(_tid,
+                           isParamValid("variable2") ? getParam<NonlinearVariableName>("variable2")
+                                                     : getParam<NonlinearVariableName>("variable1"))
+              .sys()),
+    _var1(_sys1.getFVVariable<Real>(_tid, getParam<NonlinearVariableName>("variable1"))),
+    _var2(_sys2.getFVVariable<Real>(_tid,
+                                    isParamValid("variable2")
+                                        ? getParam<NonlinearVariableName>("variable2")
+                                        : getParam<NonlinearVariableName>("variable1"))),
+    _assembly1(_subproblem.assembly(_tid, _sys1.number())),
+    _assembly2(_subproblem.assembly(_tid, _sys2.number())),
     _mesh(_subproblem.mesh())
 {
   if (getParam<bool>("use_displaced_mesh"))
     paramError("use_displaced_mesh", "FV interface kernels do not yet support displaced mesh");
+
+  if (!_var1.isFV())
+    paramError("variable1", "Variable 1 should be a finite volume variable!");
+
+  if (!_var2.isFV())
+    paramError("variable2", "Variable 2 should be a finite volume variable!");
 
   _subproblem.haveADObjects(true);
   addMooseVariableDependency(&_var1);
@@ -157,9 +169,12 @@ FVInterfaceKernel::setupData(const FaceInfo & fi)
 }
 
 void
-FVInterfaceKernel::addResidual(const Real resid, const unsigned int var_num, const bool neighbor)
+FVInterfaceKernel::addResidual(const Real resid,
+                               const unsigned int var_num,
+                               Assembly & assembly,
+                               const bool neighbor)
 {
-  neighbor ? prepareVectorTagNeighbor(_assembly, var_num) : prepareVectorTag(_assembly, var_num);
+  neighbor ? prepareVectorTagNeighbor(assembly, var_num) : prepareVectorTag(assembly, var_num);
   _local_re(0) = resid;
   accumulateTaggedLocalResidual();
 }
@@ -167,9 +182,10 @@ FVInterfaceKernel::addResidual(const Real resid, const unsigned int var_num, con
 void
 FVInterfaceKernel::addJacobian(const ADReal & resid,
                                const dof_id_type dof_index,
+                               Assembly & assembly,
                                const Real scaling_factor)
 {
-  addJacobian(_assembly,
+  addJacobian(assembly,
               std::array<ADReal, 1>{{resid}},
               std::array<dof_id_type, 1>{{dof_index}},
               scaling_factor);
@@ -183,10 +199,16 @@ FVInterfaceKernel::computeResidual(const FaceInfo & fi)
   const auto var_elem_num = _elem_is_one ? _var1.number() : _var2.number();
   const auto var_neigh_num = _elem_is_one ? _var2.number() : _var1.number();
 
+  auto & assembly_elem = _elem_is_one ? _assembly1 : _assembly2;
+  auto & assembly_neigh = _elem_is_one ? _assembly2 : _assembly1;
+
   const auto r = MetaPhysicL::raw_value(fi.faceArea() * fi.faceCoord() * computeQpResidual());
 
-  addResidual(r, var_elem_num, false);
-  addResidual(-r, var_neigh_num, true);
+  std::cout << "Computing residual" << _subproblem.currentNlSysNum() << " "
+            << MetaPhysicL::raw_value(r) << std::endl;
+
+  addResidual(r, var_elem_num, assembly_elem, false);
+  addResidual(-r, var_neigh_num, assembly_neigh, true);
 }
 
 void
@@ -208,12 +230,15 @@ FVInterfaceKernel::computeJacobian(const FaceInfo & fi)
   const auto elem_scaling_factor = _elem_is_one ? _var1.scalingFactor() : _var2.scalingFactor();
   const auto neigh_scaling_factor = _elem_is_one ? _var2.scalingFactor() : _var1.scalingFactor();
 
+  auto & assembly_elem = _elem_is_one ? _assembly1 : _assembly2;
+  auto & assembly_neigh = _elem_is_one ? _assembly2 : _assembly1;
+
   const auto r = fi.faceArea() * fi.faceCoord() * computeQpResidual();
 
   addResidualsAndJacobian(
-      _assembly, std::array<ADReal, 1>{{r}}, elem_dof_indices, elem_scaling_factor);
+      assembly_elem, std::array<ADReal, 1>{{r}}, elem_dof_indices, elem_scaling_factor);
   addResidualsAndJacobian(
-      _assembly, std::array<ADReal, 1>{{-r}}, neigh_dof_indices, neigh_scaling_factor);
+      assembly_neigh, std::array<ADReal, 1>{{-r}}, neigh_dof_indices, neigh_scaling_factor);
 }
 
 Moose::ElemArg
