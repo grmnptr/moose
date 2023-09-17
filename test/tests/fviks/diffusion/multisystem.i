@@ -2,7 +2,7 @@
   [gmg]
     type = CartesianMeshGenerator
     dim = 1
-    ix = '5 5'
+    ix = '50 50'
     dx = '1 1'
     subdomain_id = '0 1'
   []
@@ -37,7 +37,7 @@
   [diff_u]
     type = FVDiffusion
     variable = u
-    coeff = 1.0
+    coeff = 3.0
   []
   [force_u]
     type = FVBodyForce
@@ -62,10 +62,20 @@
     variable1 = u
     variable2 = v
     boundary = 'between'
-    coeff1 = 1
+    coeff1 = 3
     coeff2 = 1
     subdomain1 = 0
     subdomain2 = 1
+  []
+  [diff_ik_v]
+    type = FVDiffusionInterface
+    variable1 = v
+    variable2 = u
+    boundary = 'between'
+    coeff1 = 1
+    coeff2 = 3
+    subdomain1 = 1
+    subdomain2 = 0
   []
 []
 
@@ -92,6 +102,8 @@
   petsc_options_value = 'hypre boomeramg'
   first_nl_sys_to_solve = 'u'
   second_nl_sys_to_solve = 'v'
+  number_of_iterations = 200
+  nl_abs_tol = 1e-10
 []
 
 [Outputs]

@@ -201,6 +201,9 @@ protected:
   /// the system object for variable 2
   SystemBase & _sys2;
 
+  MooseVariableFV<Real> & _var1;
+  MooseVariableFV<Real> & _var2;
+
   /// The Assembly object for system 1
   Assembly & _assembly1;
 
@@ -208,9 +211,6 @@ protected:
   Assembly & _assembly2;
 
 private:
-  MooseVariableFV<Real> & _var1;
-  MooseVariableFV<Real> & _var2;
-
   std::set<SubdomainID> _subdomain1;
   std::set<SubdomainID> _subdomain2;
 
