@@ -100,10 +100,14 @@ protected:
   const std::set<SubdomainID> & sub2() const { return _subdomain2; }
 
   /**
-   * @return The system associated with this object. Either an undisplaced or displaced nonlinear
-   * system
+   * @return The system associated with the first variable
    */
-  // const SystemBase & sys() const { return _sys; }
+  const SystemBase & sys() const { return _sys1; }
+
+  /**
+   * @return The system associated with the second variable
+   */
+  const SystemBase & sys2() const { return _sys2; }
 
   /**
    * @return Whether the \p FaceInfo element is on the 1st side of the interface
@@ -201,7 +205,10 @@ protected:
   /// the system object for variable 2
   SystemBase & _sys2;
 
+  /// Variable on one side of the interface
   MooseVariableFV<Real> & _var1;
+
+  /// Variable on the other side of the interface
   MooseVariableFV<Real> & _var2;
 
   /// The Assembly object for system 1
