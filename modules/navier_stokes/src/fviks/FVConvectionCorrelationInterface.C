@@ -43,16 +43,22 @@ FVConvectionCorrelationInterface::FVConvectionCorrelationInterface(const InputPa
     mooseError(
         "The bulk distance should be specified or 'wall_cell_is_bulk' should be set to true for "
         "the FVTwoVarConvectionCorrelationInterface");
-  if ("wraps_" + var1().name() != _temp_fluid.functorName())
-    paramError(NS::T_fluid, "variable1 must be equal to T_fluid parameter.");
-  if ("wraps_" + var2().name() != _temp_solid.functorName())
-    paramError(NS::T_solid, "variable2 must be equal to T_solid parameter.");
+  // if ("wraps_" + var1().name() != _temp_fluid.functorName())
+  //   paramError(NS::T_fluid, "variable1 must be equal to T_fluid parameter.");
+  // if ("wraps_" + var2().name() != _temp_solid.functorName())
+  //   paramError(NS::T_solid, "variable2 must be equal to T_solid parameter.");
 }
 
 ADReal
 FVConvectionCorrelationInterface::computeQpResidual()
 {
+  // bool var1_is_fluid = ("wraps_" + var1().name() == _temp_fluid.functorName());
+  // const Elem * current_elem = (elemIsOne() && var1_is_fluid || !elemIsOne() && !var1_is_fluid)
+  //                                 ? &_face_info->elem()
+  //                                 : _face_info->neighborPtr();
+
   const Elem * current_elem = elemIsOne() ? &_face_info->elem() : _face_info->neighborPtr();
+
   const Elem * bulk_elem;
   const auto state = determineState();
   if (!_use_wall_cell)
@@ -75,8 +81,12 @@ FVConvectionCorrelationInterface::computeQpResidual()
   mooseAssert(var1().hasBlocks(bulk_elem->subdomain_id()),
               "The fluid temperature is not defined at bulk_distance from the wall.");
 
+  // const auto face_arg_side1 = singleSidedFaceArg(elemIsOne() ? var1() : var2(), _face_info);
+  // const auto face_arg_side2 = singleSidedFaceArg(elemIsOne() ? var2() : var1(), _face_info);
+
   const auto face_arg_side1 = singleSidedFaceArg(var1(), _face_info);
   const auto face_arg_side2 = singleSidedFaceArg(var2(), _face_info);
+
   const auto bulk_elem_arg = makeElemArg(bulk_elem);
 
   /// We make sure that the gradient*normal part is addressed

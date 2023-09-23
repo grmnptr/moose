@@ -655,6 +655,34 @@ MooseVariableFV<OutputType>::uncorrectedAdGradSln(const FaceInfo & fi,
 
 template <typename OutputType>
 VectorValue<ADReal>
+MooseVariableFV<OutputType>::adGradSlnOrthogonal(const FaceInfo & fi,
+                                                 const StateArg & state,
+                                                 const bool correct_skewness) const
+{
+  const bool var_defined_on_elem = this->hasBlocks(fi.elem().subdomain_id());
+  const Elem * const elem = &fi.elem();
+  const Elem * const neighbor = fi.neighborPtr();
+
+  const bool is_internal_face = this->isInternalFace(fi);
+
+  const ADReal side_one_value = (!is_internal_face && !var_defined_on_elem)
+                                    ? getBoundaryFaceValue(fi, state, correct_skewness)
+                                    : getElemValue(elem, state);
+  const ADReal side_two_value = (var_defined_on_elem && !is_internal_face)
+                                    ? getBoundaryFaceValue(fi, state, correct_skewness)
+                                    : getElemValue(neighbor, state);
+
+  const auto delta = this->isInternalFace(fi)
+                         ? fi.dCNMag()
+                         : abs((fi.faceCentroid() -
+                                (var_defined_on_elem ? fi.elemCentroid() : fi.neighborCentroid())) *
+                               fi.normal());
+
+  return ((side_two_value - side_one_value) / delta) * fi.normal();
+}
+
+template <typename OutputType>
+VectorValue<ADReal>
 MooseVariableFV<OutputType>::adGradSln(const FaceInfo & fi,
                                        const StateArg & state,
                                        const bool correct_skewness) const
@@ -692,7 +720,7 @@ MooseVariableFV<OutputType>::adGradSln(const FaceInfo & fi,
     face_grad += interpolated_gradient - (interpolated_gradient * fi.eCN()) * fi.eCN();
   }
 
-  return face_grad;
+  return this->name() == "pressure" ? adGradSlnOrthogonal(fi, state, correct_skewness) : face_grad;
 }
 
 template <typename OutputType>

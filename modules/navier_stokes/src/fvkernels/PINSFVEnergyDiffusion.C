@@ -79,5 +79,9 @@ PINSFVEnergyDiffusion::computeQpResidual()
   // Compute the temperature gradient dotted with the surface normal
   auto dTdn = gradUDotNormal(state);
 
+  // if (_face_info->faceCentroid()(0) > 1.3 && _face_info->faceCentroid()(1) > 0.5 &&
+  //     !_var.isInternalFace(*_face_info))
+  //   std::cout << _face_info->faceCentroid() << " " << raw_value(dTdn) << std::endl;
+
   return -k_eps_face * dTdn;
 }

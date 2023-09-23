@@ -198,6 +198,22 @@ FVInterfaceKernel::computeResidual(const FaceInfo & fi)
 
   const auto r = MetaPhysicL::raw_value(fi.faceArea() * fi.faceCoord() * computeQpResidual());
 
+  bool is_var1_system =
+      (_subproblem.systemBaseNonlinear(_subproblem.currentNlSysNum()).number() == _sys1.number());
+
+  // std::cout << "Adding this "
+
+  // if (_subproblem.systemBaseNonlinear(_subproblem.currentNlSysNum()).number() == _sys1.number())
+  // {
+  // addResidual(_elem_is_one ? r : -r, _var1.number(), _assembly1, _elem_is_one ? true : false);
+  // addResidual(-r, var_neigh_num, assembly_neigh, true);
+  // }
+  // else
+  //   addResidual(-r, var_neigh_num, assembly_neigh, true);
+
+  // if (&_sys1 == &_sys2)
+  //   addResidual(r, var_neigh_num, assembly_neigh, true);
+
   addResidual(r, var_elem_num, assembly_elem, false);
   addResidual(-r, var_neigh_num, assembly_neigh, true);
 }
@@ -226,10 +242,30 @@ FVInterfaceKernel::computeJacobian(const FaceInfo & fi)
 
   const auto r = fi.faceArea() * fi.faceCoord() * computeQpResidual();
 
+  bool is_var1_system =
+      (_subproblem.systemBaseNonlinear(_subproblem.currentNlSysNum()).number() == _sys1.number());
+
+  // if (_subproblem.systemBaseNonlinear(_subproblem.currentNlSysNum()).number() == _sys1.number())
+  // {
+  // addResidualsAndJacobian(_assembly1,
+  //                         std::array<ADReal, 1>{{_elem_is_one ? r : -r}},
+  //                         _elem_is_one ? _var1.dofIndices() : _var1.dofIndicesNeighbor(),
+  //                         _var1.scalingFactor());
+  // addResidualsAndJacobian(
+  //     assembly_neigh, std::array<ADReal, 1>{{-r}}, neigh_dof_indices, neigh_scaling_factor);
+  // }
+  // else
+  //   addResidualsAndJacobian(
+  //       assembly_neigh, std::array<ADReal, 1>{{r}}, neigh_dof_indices, neigh_scaling_factor);
+
+  // if (&_sys1 == &_sys2)
+  //   addResidualsAndJacobian(
+  //       assembly_neigh, std::array<ADReal, 1>{{r}}, neigh_dof_indices, neigh_scaling_factor);
+
   addResidualsAndJacobian(
-      assembly_elem, std::array<ADReal, 1>{{r}}, elem_dof_indices, elem_scaling_factor);
+      _assembly1, std::array<ADReal, 1>{{r}}, elem_dof_indices, elem_scaling_factor);
   addResidualsAndJacobian(
-      assembly_neigh, std::array<ADReal, 1>{{-r}}, neigh_dof_indices, neigh_scaling_factor);
+      _assembly1, std::array<ADReal, 1>{{-r}}, neigh_dof_indices, neigh_scaling_factor);
 }
 
 Moose::ElemArg

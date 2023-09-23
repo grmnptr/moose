@@ -810,8 +810,8 @@ SIMPLE::solveAdvectedSystem(const unsigned int system_num,
   rhs.scale(-1.0);
 
   // Go and relax the system matrix and the right hand side
-  relaxMatrix(mmat, relaxation_factor, *diff_diagonal);
-  relaxRightHandSide(rhs, solution, *diff_diagonal);
+  // relaxMatrix(mmat, relaxation_factor, *diff_diagonal);
+  // relaxRightHandSide(rhs, solution, *diff_diagonal);
 
   if (_print_fields)
   {

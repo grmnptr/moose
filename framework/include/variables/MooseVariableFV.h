@@ -284,6 +284,10 @@ public:
   virtual VectorValue<ADReal>
   adGradSln(const FaceInfo & fi, const StateArg & state, const bool correct_skewness = false) const;
 
+  virtual VectorValue<ADReal> adGradSlnOrthogonal(const FaceInfo & fi,
+                                                  const StateArg & state,
+                                                  const bool correct_skewness = false) const;
+
   /**
    * Retrieve (or potentially compute) the uncorrected gradient on the provided face. This
    * uncorrected gradient is a simple linear interpolation between cell gradients computed at the

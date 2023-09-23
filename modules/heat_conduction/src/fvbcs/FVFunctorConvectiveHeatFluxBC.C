@@ -46,6 +46,8 @@ FVFunctorConvectiveHeatFluxBC::computeQpResidual()
       _face_info, Moose::FV::LimiterType::CentralDifference, true, false, nullptr};
   const auto flux = _htc(face, determineState()) *
                     (_T_bulk(face, determineState()) - _T_solid(face, determineState()));
+
+  /// We make sure that the gradient*normal part is addressed
   if (_is_solid)
     return -flux;
   else

@@ -2929,13 +2929,25 @@ FEProblemBase::addFVInterfaceKernel(const std::string & fv_ik_name,
                                     const std::string & name,
                                     InputParameters & parameters)
 {
-  const auto nl_sys_num =
+  const auto nl_sys_num1 =
       determineNonlinearSystem(parameters.varName("variable1", name), true).first
           ? determineNonlinearSystem(parameters.varName("variable1", name), true).second
           : (unsigned int)0;
-  parameters.set<SystemBase *>("_sys") = _nl[nl_sys_num].get();
 
+  const auto nl_sys_num2 =
+      determineNonlinearSystem(parameters.varName("variable2", name), true).first
+          ? determineNonlinearSystem(parameters.varName("variable2", name), true).second
+          : (unsigned int)0;
+
+  parameters.set<SystemBase *>("_sys") = _nl[nl_sys_num1].get();
   addObject<FVInterfaceKernel>(fv_ik_name, name, parameters);
+
+  // if (nl_sys_num1 != nl_sys_num2)
+  // {
+  //   InputParameters params2 = parameters;
+  //   params2.set<SystemBase *>("_sys") = _nl[nl_sys_num2].get();
+  //   addObject<FVInterfaceKernel>(fv_ik_name, name + "_var2", params2);
+  // }
 }
 
 // InterfaceKernels ////
