@@ -542,6 +542,8 @@ associateSyntaxInner(Syntax & syntax, ActionFactory & /*action_factory*/)
   registerSyntax("AddFVInterfaceKernelAction", "FVInterfaceKernels/*");
   registerSyntax("CheckFVBCAction", "FVBCs");
 
+  registerSyntax("AddLinearFVKernelAction", "LinearFVKernels/*");
+
   registerSyntax("AddInterfaceKernelAction", "InterfaceKernels/*");
 
   registerSyntax("AddConstraintAction", "Constraints/*");
