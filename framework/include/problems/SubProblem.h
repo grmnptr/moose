@@ -950,6 +950,7 @@ protected:
                                              Moose::VarKindType expected_var_type,
                                              Moose::VarFieldType expected_var_field_type,
                                              const std::vector<T> & nls,
+                                             const std::vector<T2> & linear_systems,
                                              const SystemBase & aux) const;
 
   /**
@@ -1050,6 +1051,9 @@ private:
    */
   virtual std::pair<bool, unsigned int>
   determineNonlinearSystem(const std::string & var_name, bool error_if_not_found = false) const = 0;
+
+  virtual std::pair<bool, unsigned int>
+  determineLinearSystem(const std::string & var_name, bool error_if_not_found = false) const = 0;
 
   enum class TrueFunctorIs
   {
