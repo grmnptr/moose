@@ -1113,6 +1113,7 @@ Builder::extractParams(const std::string & prefix, InputParameters & p)
         setscalar(PostprocessorName, PostprocessorName);
         setscalar(ExecutorName, string);
         setscalar(NonlinearSystemName, string);
+        setscalar(LinearSystemName, string);
         setscalar(CLIArgString, string);
 
         // Moose Compound Scalars
@@ -1186,6 +1187,7 @@ Builder::extractParams(const std::string & prefix, InputParameters & p)
         setvector(ReporterValueName, string);
         setvector(ExecutorName, string);
         setvector(NonlinearSystemName, string);
+        setvector(LinearSystemName, string);
 
         // map types
         setmap(string, Real);
