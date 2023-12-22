@@ -2551,10 +2551,14 @@ MooseApp::attachRelationshipManagers(Moose::RelationshipManagerType rm_type,
       else
       {
         MeshBase & undisp_mesh_base = mesh->getMesh();
-        const DofMap * const undisp_nl_dof_map =
-            _executioner ? &feProblem().systemBaseNonlinear(0).dofMap() : nullptr;
+        const DofMap * const undisp_sys_dof_map =
+            _executioner
+                ? (feProblem().numNonlinearSystems() ? &feProblem().systemBaseNonlinear(0).dofMap()
+                                                     : &feProblem().systemBaseLinear(0).dofMap())
+
+                : nullptr;
         undisp_mesh_base.add_ghosting_functor(
-            createRMFromTemplateAndInit(*rm, undisp_mesh_base, undisp_nl_dof_map));
+            createRMFromTemplateAndInit(*rm, undisp_mesh_base, undisp_sys_dof_map));
 
         // In the final stage, if there is a displaced mesh, we need to
         // clone ghosting functors for displacedMesh
@@ -2562,7 +2566,8 @@ MooseApp::attachRelationshipManagers(Moose::RelationshipManagerType rm_type,
         {
           MeshBase & disp_mesh_base = _action_warehouse.displacedMesh()->getMesh();
           const DofMap * disp_nl_dof_map = nullptr;
-          if (_executioner && feProblem().getDisplacedProblem())
+          if ((_executioner && feProblem().getDisplacedProblem()->numNonlinearSystems()) &&
+              feProblem().getDisplacedProblem())
             disp_nl_dof_map = &feProblem().getDisplacedProblem()->systemBaseNonlinear(0).dofMap();
           disp_mesh_base.add_ghosting_functor(
               createRMFromTemplateAndInit(*rm, disp_mesh_base, disp_nl_dof_map));
@@ -2584,8 +2589,9 @@ MooseApp::attachRelationshipManagers(Moose::RelationshipManagerType rm_type,
 
       // Now we've built the problem, so we can use it
       auto & problem = feProblem();
-      auto & undisp_nl = problem.systemBaseNonlinear(0);
-      auto & undisp_nl_dof_map = undisp_nl.dofMap();
+      auto & undisp_sys =
+          problem.numLinearSystems() ? problem.systemBaseNonlinear(0) : problem.systemBaseLinear(0);
+      auto & undisp_sys_dof_map = undisp_sys.dofMap();
       auto & undisp_mesh = problem.mesh().getMesh();
 
       if (rm->useDisplacedMesh() && problem.getDisplacedProblem())
@@ -2603,7 +2609,7 @@ MooseApp::attachRelationshipManagers(Moose::RelationshipManagerType rm_type,
           // functor for! Let's err on the side of *libMesh* consistency and pass properly paired
           // MeshBase-DofMap
           problem.addCouplingGhostingFunctor(
-              createRMFromTemplateAndInit(*rm, undisp_mesh, &undisp_nl_dof_map),
+              createRMFromTemplateAndInit(*rm, undisp_mesh, &undisp_sys_dof_map),
               /*to_mesh = */ false);
 
         else if (rm_type == Moose::RelationshipManagerType::ALGEBRAIC)
@@ -2620,12 +2626,12 @@ MooseApp::attachRelationshipManagers(Moose::RelationshipManagerType rm_type,
       {
         if (rm_type == Moose::RelationshipManagerType::COUPLING)
           problem.addCouplingGhostingFunctor(
-              createRMFromTemplateAndInit(*rm, undisp_mesh, &undisp_nl_dof_map),
+              createRMFromTemplateAndInit(*rm, undisp_mesh, &undisp_sys_dof_map),
               /*to_mesh = */ false);
 
         else if (rm_type == Moose::RelationshipManagerType::ALGEBRAIC)
           problem.addAlgebraicGhostingFunctor(
-              createRMFromTemplateAndInit(*rm, undisp_mesh, &undisp_nl_dof_map),
+              createRMFromTemplateAndInit(*rm, undisp_mesh, &undisp_sys_dof_map),
               /*to_mesh = */ false);
       }
 
