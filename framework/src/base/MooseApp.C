@@ -2565,12 +2565,14 @@ MooseApp::attachRelationshipManagers(Moose::RelationshipManagerType rm_type,
         if (attach_geometric_rm_final && _action_warehouse.displacedMesh())
         {
           MeshBase & disp_mesh_base = _action_warehouse.displacedMesh()->getMesh();
-          const DofMap * disp_nl_dof_map = nullptr;
-          if ((_executioner && feProblem().getDisplacedProblem()->numNonlinearSystems()) &&
-              feProblem().getDisplacedProblem())
-            disp_nl_dof_map = &feProblem().getDisplacedProblem()->systemBaseNonlinear(0).dofMap();
+          const DofMap * disp_sys_dof_map = nullptr;
+          if (_executioner && feProblem().getDisplacedProblem())
+            disp_sys_dof_map =
+                feProblem().getDisplacedProblem()->numNonlinearSystems()
+                    ? &feProblem().getDisplacedProblem()->systemBaseNonlinear(0).dofMap()
+                    : &feProblem().getDisplacedProblem()->systemBaseLinear(0).dofMap();
           disp_mesh_base.add_ghosting_functor(
-              createRMFromTemplateAndInit(*rm, disp_mesh_base, disp_nl_dof_map));
+              createRMFromTemplateAndInit(*rm, disp_mesh_base, disp_sys_dof_map));
         }
         else if (_action_warehouse.displacedMesh())
           mooseError("The displaced mesh should not yet exist at the time that we are attaching "
@@ -2589,8 +2591,8 @@ MooseApp::attachRelationshipManagers(Moose::RelationshipManagerType rm_type,
 
       // Now we've built the problem, so we can use it
       auto & problem = feProblem();
-      auto & undisp_sys =
-          problem.numLinearSystems() ? problem.systemBaseNonlinear(0) : problem.systemBaseLinear(0);
+      auto & undisp_sys = problem.numNonlinearSystems() ? problem.systemBaseNonlinear(0)
+                                                        : problem.systemBaseLinear(0);
       auto & undisp_sys_dof_map = undisp_sys.dofMap();
       auto & undisp_mesh = problem.mesh().getMesh();
 
@@ -2616,7 +2618,10 @@ MooseApp::attachRelationshipManagers(Moose::RelationshipManagerType rm_type,
         {
           auto & displaced_problem = *problem.getDisplacedProblem();
           MeshBase & disp_mesh = displaced_problem.mesh().getMesh();
-          const DofMap * const disp_nl_dof_map = &displaced_problem.systemBaseNonlinear(0).dofMap();
+          const DofMap * const disp_nl_dof_map =
+              displaced_problem.numNonlinearSystems()
+                  ? &displaced_problem.systemBaseNonlinear(0).dofMap()
+                  : &displaced_problem.systemBaseLinear(0).dofMap();
           displaced_problem.addAlgebraicGhostingFunctor(
               createRMFromTemplateAndInit(*rm, disp_mesh, disp_nl_dof_map),
               /*to_mesh = */ false);
