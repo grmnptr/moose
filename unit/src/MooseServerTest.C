@@ -1091,6 +1091,8 @@ label: GlobalParams                     text: [GlobalParams]\n  \n[]            
 label: ICs                              text: [ICs]\n  \n[]                              desc: application named block                  pos: [42.0]-[42.0] kind: 22
 label: InterfaceKernels                 text: [InterfaceKernels]\n  \n[]                 desc: application named block                  pos: [42.0]-[42.0] kind: 22
 label: Kernels                          text: [Kernels]\n  \n[]                          desc: application named block                  pos: [42.0]-[42.0] kind: 22
+label: LinearFVBCsKernels               text: [LinearFVBCs]\n  \n[]                      desc: application named block                  pos: [42.0]-[42.0] kind: 22
+label: LinearFVKernels                  text: [LinearFVKernels]\n  \n[]                  desc: application named block                  pos: [42.0]-[42.0] kind: 22
 label: Materials                        text: [Materials]\n  \n[]                        desc: application named block                  pos: [42.0]-[42.0] kind: 22
 label: Mesh                             text: [Mesh]\n  \n[]                             desc: application named block                  pos: [42.0]-[42.0] kind: 22
 label: MeshDivisions                    text: [MeshDivisions]\n  \n[]                    desc: application named block                  pos: [42.0]-[42.0] kind: 22
