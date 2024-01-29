@@ -1054,7 +1054,7 @@ TEST_F(MooseServerTest, CompletionDocumentRootLevel)
 
   EXPECT_EQ(request_id, response_id);
 
-  EXPECT_EQ(48u, completions_array.size());
+  EXPECT_EQ(50u, completions_array.size());
 
   std::ostringstream completions_actual;
 
