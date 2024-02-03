@@ -40,6 +40,7 @@ protected:
    */
   virtual void initializeFromMultiapp() override;
   virtual void executeFromMultiapp() override;
+  virtual void executeToMultiapp() override;
   virtual void finalizeFromMultiapp() override;
   ///@}
 
@@ -55,8 +56,21 @@ protected:
    */
   void transferStochasticReporters(dof_id_type global_index, dof_id_type app_index);
 
+  /**
+   * Transfer reporter values
+   * @param global_index The global row of the sampler matrix
+   * @param app_index The subapp index to transfer from
+   */
+  void transferToReporters(dof_id_type global_index, dof_id_type app_index);
+
   /// Name of reporters on the sub-applications
   const std::vector<ReporterName> & _sub_reporter_names;
+
+  /// Name of reporters on the main-applications
+  const std::vector<ReporterName> & _source_reporter_names;
+
+  /// Destination name of reporters on the sub-applications
+  const std::vector<ReporterName> & _to_reporter_names;
 
   /// StochasticReporter object where values are being transferred
   StochasticReporter * _results = nullptr;

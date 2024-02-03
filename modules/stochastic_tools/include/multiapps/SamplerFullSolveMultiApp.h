@@ -62,6 +62,14 @@ public:
                      bool verbose,
                      const ConsoleStream & console);
 
+  static void
+  execBatchNonStochasticTransfers(const std::vector<std::shared_ptr<Transfer>> & transfers,
+                                  dof_id_type global_row_index,
+                                  const std::vector<Real> & row_data,
+                                  Transfer::DIRECTION direction,
+                                  bool verbose,
+                                  const ConsoleStream & console);
+
 protected:
   /// Override to avoid 'solve converged' message and print when processors are finished
   virtual void showStatusMessage(unsigned int i) const override;
@@ -95,6 +103,11 @@ private:
    */
   std::vector<std::shared_ptr<StochasticToolsTransfer>>
   getActiveStochasticToolsTransfers(Transfer::DIRECTION direction);
+
+  /**
+   * Helper for getting StochasticToolsTransfer objects.
+   */
+  std::vector<std::shared_ptr<Transfer>> getActiveNonStochasticToolsTransfers();
 
   // Flag indicating a solve has occured
   bool _solved_once;

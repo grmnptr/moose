@@ -148,6 +148,9 @@ SamplerFullSolveMultiApp::solveStepBatch(Real dt, Real target_time, bool auto_ad
   std::vector<std::shared_ptr<StochasticToolsTransfer>> from_transfers =
       getActiveStochasticToolsTransfers(MultiAppTransfer::FROM_MULTIAPP);
 
+  std::vector<std::shared_ptr<Transfer>> non_stochastic_to_transfers =
+      getActiveNonStochasticToolsTransfers();
+
   // Initialize to/from transfers
   for (auto transfer : to_transfers)
   {
@@ -330,6 +333,22 @@ SamplerFullSolveMultiApp::getActiveStochasticToolsTransfers(Transfer::DIRECTION 
   {
     auto ptr = std::dynamic_pointer_cast<StochasticToolsTransfer>(transfer);
     if (ptr && ptr->getMultiApp().get() == this)
+      output.push_back(ptr);
+  }
+  return output;
+}
+
+std::vector<std::shared_ptr<Transfer>>
+SamplerFullSolveMultiApp::getActiveNonStochasticToolsTransfers()
+{
+  std::vector<std::shared_ptr<Transfer>> output;
+  const ExecuteMooseObjectWarehouse<Transfer> & warehouse =
+      _fe_problem.getMultiAppTransferWarehouse(Transfer::DIRECTION::TO_MULTIAPP);
+  for (std::shared_ptr<Transfer> transfer : warehouse.getActiveObjects())
+  {
+    auto multiapp_transfer_ptr = std::dynamic_pointer_cast<MultiAppTransfer>(transfer);
+    auto ptr = std::dynamic_pointer_cast<StochasticToolsTransfer>(multiapp_transfer_ptr);
+    if (!ptr && multiapp_transfer_ptr)
       output.push_back(ptr);
   }
   return output;

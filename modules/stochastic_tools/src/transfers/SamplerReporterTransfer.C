@@ -26,8 +26,12 @@ SamplerReporterTransfer::validParams()
   params.addClassDescription("Transfers data from Reporters on the sub-application to a "
                              "StochasticReporter on the main application.");
 
-  params.addRequiredParam<std::vector<ReporterName>>(
-      "from_reporter", "The name(s) of the Reporter(s) on the sub-app to transfer from.");
+  params.addParam<std::vector<ReporterName>>(
+      "from_reporter", {}, "The name(s) of the Reporter(s) on the sub-app to transfer from.");
+  params.addParam<std::vector<ReporterName>>(
+      "source_reporter", {}, "The name(s) of the Reporter(s) on the main-app to transfer from.");
+  params.addParam<std::vector<ReporterName>>(
+      "to_reporter", {}, "The name(s) of the Reporter(s) on the sub-app to transfer to.");
   params.addRequiredParam<std::string>(
       "stochastic_reporter", "The name of the StochasticReporter object to transfer values to.");
 
@@ -43,10 +47,10 @@ SamplerReporterTransfer::validParams()
 SamplerReporterTransfer::SamplerReporterTransfer(const InputParameters & parameters)
   : StochasticToolsTransfer(parameters),
     ReporterTransferInterface(this),
-    _sub_reporter_names(getParam<std::vector<ReporterName>>("from_reporter"))
+    _sub_reporter_names(getParam<std::vector<ReporterName>>("from_reporter")),
+    _source_reporter_names(getParam<std::vector<ReporterName>>("source_reporter")),
+    _to_reporter_names(getParam<std::vector<ReporterName>>("to_reporter"))
 {
-  if (hasToMultiApp())
-    paramError("to_multi_app", "To and between multiapp directions are not implemented");
 }
 
 void
@@ -78,6 +82,17 @@ SamplerReporterTransfer::executeFromMultiapp()
 }
 
 void
+SamplerReporterTransfer::executeToMultiapp()
+{
+  if (getToMultiApp()->isRootProcessor())
+  {
+    const dof_id_type n = getToMultiApp()->numGlobalApps();
+    for (MooseIndex(n) i = 0; i < n; i++)
+      transferToReporters(_global_index, i);
+  }
+}
+
+void
 SamplerReporterTransfer::finalizeFromMultiapp()
 {
 }
@@ -92,7 +107,7 @@ SamplerReporterTransfer::execute()
 void
 SamplerReporterTransfer::intitializeStochasticReporters()
 {
-  const dof_id_type n = getFromMultiApp()->numGlobalApps();
+  const dof_id_type n = hasFromMultiApp() ? getFromMultiApp()->numGlobalApps() : 0;
 
   for (const auto & sub_rname : _sub_reporter_names)
     for (MooseIndex(n) i = 0; i < n; i++)
@@ -138,5 +153,20 @@ SamplerReporterTransfer::transferStochasticReporters(dof_id_type global_index,
                                local_index);
 
     (*_converged)[local_index] = getFromMultiApp()->getExecutioner(app_index)->lastSolveConverged();
+  }
+}
+
+void
+SamplerReporterTransfer::transferToReporters(dof_id_type global_index, dof_id_type app_index)
+{
+  if (getToMultiApp()->hasLocalApp(app_index))
+  {
+    const dof_id_type local_index = global_index - _sampler_ptr->getLocalRowBegin();
+    for (unsigned int r = 0; r < _source_reporter_names.size(); ++r)
+      transferReporter(_source_reporter_names[r],
+                       _to_reporter_names[r],
+                       getToMultiApp()->problemBase(),
+                       getToMultiApp()->appProblemBase(app_index),
+                       0);
   }
 }
