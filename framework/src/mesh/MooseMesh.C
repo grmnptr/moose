@@ -3679,7 +3679,7 @@ MooseMesh::cacheFaceInfoVariableOwnership() const
   {
     const auto & nl_variables = _app.feProblem().getNonlinearSystemBase(i).getVariables(0);
     for (const auto & var : nl_variables)
-      if (var->fieldType() == 0)
+      if (var->fieldType() == Moose::VAR_FIELD_STANDARD)
         moose_vars.push_back(var);
   }
 
@@ -3687,13 +3687,13 @@ MooseMesh::cacheFaceInfoVariableOwnership() const
   {
     const auto & variables = _app.feProblem().getLinearSystem(i).getVariables(0);
     for (const auto & var : variables)
-      if (var->fieldType() == 0)
+      if (var->fieldType() == Moose::VAR_FIELD_STANDARD)
         moose_vars.push_back(var);
   }
 
   const auto & aux_variables = _app.feProblem().getAuxiliarySystem().getVariables(0);
   for (const auto & var : aux_variables)
-    if (var->fieldType() == 0)
+    if (var->fieldType() == Moose::VAR_FIELD_STANDARD)
       moose_vars.push_back(var);
 
   for (FaceInfo & face : _all_face_info)
