@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "SystemBase.h"
+#include "SolverSystem.h"
 #include "ConstraintWarehouse.h"
 #include "MooseObjectWarehouse.h"
 #include "MooseObjectTagWarehouse.h"
@@ -61,7 +61,7 @@ class DiagonalMatrix;
  *
  * It is a part of FEProblemBase ;-)
  */
-class NonlinearSystemBase : public SystemBase, public PerfGraphInterface
+class NonlinearSystemBase : public SolverSystem, public PerfGraphInterface
 {
 public:
   NonlinearSystemBase(FEProblemBase & problem, System & sys, const std::string & name);
@@ -77,7 +77,6 @@ public:
   virtual void turnOffJacobian();
 
   virtual void solve() override = 0;
-  virtual void restoreSolutions() override;
 
   /**
    * Quit the current solve as soon as possible.
@@ -353,8 +352,6 @@ public:
    */
   virtual void subdomainSetup(SubdomainID subdomain, THREAD_ID tid);
 
-  virtual void setSolution(const NumericVector<Number> & soln);
-
   /**
    * Update active objects of Warehouses owned by NonlinearSystemBase
    */
@@ -390,14 +387,6 @@ public:
    * Return a residual vector that is associated with the residual tag.
    */
   NumericVector<Number> & residualVector(TagID tag);
-
-  const NumericVector<Number> * const & currentSolution() const override
-  {
-    return _current_solution;
-  }
-
-  virtual void serializeSolution();
-  virtual NumericVector<Number> & serializedSolution() override;
 
   virtual NumericVector<Number> & residualCopy() override;
   virtual NumericVector<Number> & residualGhosted() override;
@@ -528,14 +517,6 @@ public:
 
   void setPredictor(std::shared_ptr<Predictor> predictor);
   Predictor * getPredictor() { return _predictor.get(); }
-
-  void setPCSide(MooseEnum pcs);
-
-  Moose::PCSideType getPCSide() { return _pc_side; }
-
-  void setMooseKSPNormType(MooseEnum kspnorm);
-
-  Moose::MooseKSPNormType getMooseKSPNormType() { return _ksp_norm; }
 
   /**
    * Indicated whether this system needs material properties on boundaries.
@@ -745,16 +726,8 @@ protected:
    */
   virtual void postAddResidualObject(ResidualObject &) {}
 
-  NumericVector<Number> & solutionInternal() const override { return *_sys.solution; }
-
-  /// solution vector from nonlinear solver
-  const NumericVector<Number> * _current_solution;
   /// ghosted form of the residual
   NumericVector<Number> * _residual_ghosted;
-
-  /// Serialized version of the solution vector, or nullptr if a
-  /// serialized solution is not needed
-  std::unique_ptr<NumericVector<Number>> _serialized_solution;
 
   /// Copy of the residual vector, or nullptr if a copy is not needed
   std::unique_ptr<NumericVector<Number>> _residual_copy;
@@ -832,10 +805,6 @@ protected:
   NumericVector<Number> * _increment_vec;
   /// Preconditioner
   std::shared_ptr<MoosePreconditioner> _preconditioner;
-  /// Preconditioning side
-  Moose::PCSideType _pc_side;
-  /// KSP norm type
-  Moose::MooseKSPNormType _ksp_norm;
 
   /// Whether or not to use a finite differenced preconditioner
   bool _use_finite_differenced_preconditioner;
