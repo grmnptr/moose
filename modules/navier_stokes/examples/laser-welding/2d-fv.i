@@ -1,13 +1,14 @@
-period=.2e-4 # s
-endtime=${fparse 3 * period} # s
-timestep=${fparse period / 100} # s
-surfacetemp=2700 # K
-bottomtemp=2700 # K
+endtime=1e-4 # s
+timestep=${fparse endtime/200} # s
+surfacetemp=1000 # K
+bottomtemp=500 # K
 sb=5.67e-8 # W/(m^2 K^4)
 advected_interp_method='upwind'
-velocity_interp_method='rc'
+velocity_interp_method='average'
 rho='rho'
 mu='mu'
+# power=159.96989792079225
+power=350.96989792079225
 
 [GlobalParams]
   rhie_chow_user_object = 'rc'
@@ -16,12 +17,13 @@ mu='mu'
 [Mesh]
   type = GeneratedMesh
   dim = 2
-  xmin = -.7e-3 # m
-  xmax = 0.7e-3 # m
-  ymin = -.35e-3 # m
+  xmin = -.45e-3 # m
+  xmax = 0.45e-3 # m
+  ymin = -.5e-4 # m
   ymax = 0
-  nx = 75
-  ny = 20
+  nx = 260
+  ny = 50
+  bias_y = 0.9
   displacements = 'disp_x disp_y'
 []
 
@@ -336,9 +338,9 @@ mu='mu'
     type = FVGaussianEnergyFluxBC
     variable = T
     boundary = 'top'
-    P0 = 159.96989792079225
+    P0 = ${power}
     R = 1.25e-4
-    x_beam_coord = '2e-4 * sin(t * 2 * pi / ${period})'
+    x_beam_coord = '-0.35e-3 +0.7e-3*t/${endtime}'
     y_beam_coord = 0
     z_beam_coord = 0
     use_displaced_mesh = true
@@ -427,8 +429,8 @@ mu='mu'
   petsc_options = '-snes_converged_reason -ksp_converged_reason -options_left'
   solve_type = 'PJFNK'
   line_search = 'none'
-  nl_max_its = 12
-  l_max_its = 100
+  nl_max_its = 8
+  l_max_its = 30
   [TimeStepper]
     type = IterationAdaptiveDT
     optimal_iterations = 7
