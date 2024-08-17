@@ -1,13 +1,13 @@
 scanning_speed=1 # m/s
 surfacetemp=300 # K
-power=79 # W
+power=80 # W
 R=1.25e-4 # m
 thickness=0.9e-4 # m
 xmin=-0.1e-3 # m
 xmax=0.75e-3 # m
 ymin=${fparse -thickness}
 
-endtime=0.1e-3 # s
+endtime=0.02e-3 # 0.2e-3 # s
 timestep=${fparse endtime/3000} # s
 
 [Mesh]
@@ -39,6 +39,28 @@ timestep=${fparse endtime/3000} # s
   [disp_x]
   []
   [disp_y]
+  []
+[]
+
+[AuxVariables]
+  [vel_x_aux]
+  []
+  [vel_y_aux]
+  []
+[]
+
+[AuxKernels]
+  [vel_x_comp]
+    type = VectorVariableComponentAux
+    variable = vel_x_aux
+    vector_variable = vel
+    component = x
+  []
+  [vel_y_comp]
+    type = VectorVariableComponentAux
+    variable = vel_y_aux
+    vector_variable = vel
+    component = y
   []
 []
 
@@ -263,7 +285,7 @@ timestep=${fparse endtime/3000} # s
   end_time = ${endtime}
   dtmin = 1e-10
   dtmax = 1e-5
-  petsc_options = '-snes_converged_reason -ksp_converged_reason -options_left'
+  # petsc_options = '-snes_converged_reason -ksp_converged_reason -options_left'
   solve_type = 'NEWTON'
   line_search = 'none'
   nl_max_its = 16
@@ -283,9 +305,23 @@ timestep=${fparse endtime/3000} # s
     type = Exodus
     output_material_properties = true
     show_material_properties = 'mu rho cp k'
-    execute_on = FINAL
+    execute_on = TIMESTEP_END
   []
 []
+
+[Reporters]
+  [solution_storage_sol]
+    type = SolutionContainer
+    execute_on = 'FINAL'
+    system = nonlinear
+  []
+  [solution_storage_aux]
+    type = SolutionContainer
+    execute_on = 'FINAL'
+    system = aux
+  []
+[]
+
 
 [Debug]
   show_var_residual_norms = true

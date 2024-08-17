@@ -4,18 +4,13 @@
 [Distributions]
   [R_dist]
     type = Uniform
-    lower_bound = 1.7257418583505537e-4
-    upper_bound = 1.9257418583505537e-4
+    lower_bound = 1.25e-4
+    upper_bound = 2.0e-4
   []
   [power_dist]
     type = Uniform
-    lower_bound = 170
-    upper_bound = 190
-  []
-  [sb_dist]
-    type = Uniform
-    lower_bound = 5.17e-8
-    upper_bound = 6.17e-8
+    lower_bound = 60
+    upper_bound = 70
   []
 []
 
@@ -23,7 +18,7 @@
   [sample]
     type = LatinHypercube
     num_rows = 2
-    distributions = 'R_dist power_dist sb_dist'
+    distributions = 'R_dist power_dist'
     min_procs_per_row = 2
     max_procs_per_row = 2
     execute_on = PRE_MULTIAPP_SETUP
@@ -45,15 +40,22 @@
   [pod_mapping_sol]
     type = PODMapping
     solution_storage = parallel_storage_sol
-    variables = "T disp_x disp_y"
-    num_modes_to_compute = '1 1 1'
+    variables = "T"
+    num_modes_to_compute = '2'
     extra_slepc_options = "-svd_monitor_all"
   []
+  # [pod_mapping_sol]
+  #   type = PODMapping
+  #   solution_storage = parallel_storage_sol
+  #   variables = "T disp_x disp_y"
+  #   num_modes_to_compute = '2 2 2'
+  #   extra_slepc_options = "-svd_monitor_all"
+  # []
   # [pod_mapping_aux]
   #   type = PODMapping
   #   solution_storage = parallel_storage_aux
   #   variables = "vel_x_aux vel_y_aux"
-  #   num_modes_to_compute = '20 20'
+  #   num_modes_to_compute = '2 2'
   #   extra_slepc_options = "-svd_monitor_all"
   # []
 []
@@ -63,7 +65,7 @@
     type = MultiAppSamplerControl
     multi_app = worker
     sampler = sample
-    param_names = 'R power sb'
+    param_names = 'R power'
   []
 []
 
@@ -74,9 +76,18 @@
     from_multi_app = worker
     sampler = sample
     solution_container = solution_storage_sol
-    variables = "T disp_x disp_y"
+    variables = "T"
     serialize_on_root = false
   []
+  # [solution_transfer_sol]
+  #   type = SerializedSolutionTransfer
+  #   parallel_storage = parallel_storage_sol
+  #   from_multi_app = worker
+  #   sampler = sample
+  #   solution_container = solution_storage_sol
+  #   variables = "T disp_x disp_y"
+  #   serialize_on_root = false
+  # []
   # [solution_transfer_aux]
   #   type = SerializedSolutionTransfer
   #   parallel_storage = parallel_storage_aux
@@ -91,9 +102,28 @@
 [Reporters]
   [parallel_storage_sol]
     type = ParallelSolutionStorage
-    variables = "T disp_x disp_y"
+    variables = "T"
     outputs = none
   []
+  [svd_output_sol]
+    type = SingularTripletReporter
+    variables = "T"
+    pod_mapping = pod_mapping_sol
+    execute_on = FINAL
+  []
+  [reduced_sol]
+    type = MappingReporter
+    sampler = sample
+    parallel_storage = parallel_storage_sol
+    mapping = pod_mapping_sol
+    variables = "T"
+    execute_on = timestep_end
+  []
+  # [parallel_storage_sol]
+  #   type = ParallelSolutionStorage
+  #   variables = "T disp_x disp_y"
+  #   outputs = none
+  # []
   # [parallel_storage_aux]
   #   type = ParallelSolutionStorage
   #   variables = 'vel_x_aux vel_y_aux'
@@ -111,14 +141,14 @@
   #   pod_mapping = pod_mapping_aux
   #   execute_on = FINAL
   # []
-  [reduced_sol]
-    type = MappingReporter
-    sampler = sample
-    parallel_storage = parallel_storage_sol
-    mapping = pod_mapping_sol
-    variables = "T disp_x disp_y"
-    execute_on = timestep_end
-  []
+  # [reduced_sol]
+  #   type = MappingReporter
+  #   sampler = sample
+  #   parallel_storage = parallel_storage_sol
+  #   mapping = pod_mapping_sol
+  #   variables = "T disp_x disp_y"
+  #   execute_on = timestep_end
+  # []
   # [reduced_aux]
   #   type = MappingReporter
   #   sampler = sample
