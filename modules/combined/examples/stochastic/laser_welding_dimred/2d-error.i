@@ -1,6 +1,6 @@
 scanning_speed=1 # m/s
 surfacetemp=300 # K
-power=80 # W
+power=75 # W
 R=1.25e-4 # m
 thickness=0.9e-4 # m
 xmin=-0.1e-3 # m
@@ -46,6 +46,8 @@ timestep=${fparse endtime/1000} # s
   [vel_x_aux]
   []
   [vel_y_aux]
+  []
+  [T_pod]
   []
 []
 
@@ -299,6 +301,33 @@ timestep=${fparse endtime/1000} # s
   []
 []
 
+[UserObjects]
+  [im_sol]
+    type = InverseMapping
+    mapping = pod_mapping_sol
+    variable_to_fill = "T_pod"
+    variable_to_reconstruct = "T"
+    surrogate = mogp
+    execute_on = TIMESTEP_END
+    parameters = '${R} ${power}'
+  []
+[]
+
+[Surrogates]
+  [mogp]
+    type = GaussianProcessSurrogate
+    filename = pod_mapping_train_surr_mogp_trainer.rd
+  []
+[]
+
+[VariableMappings]
+  [pod_mapping_sol]
+    type = PODMapping
+    filename = pod_mapping_train_mapping_sol_pod_mapping_sol.rd
+    num_modes_to_compute = 10
+  []
+[]
+
 [Outputs]
   [exodus]
     type = Exodus
@@ -307,15 +336,6 @@ timestep=${fparse endtime/1000} # s
     execute_on = FINAL
   []
 []
-
-[Reporters]
-  [solution_storage_sol]
-    type = SolutionContainer
-    execute_on = 'FINAL'
-    system = nonlinear
-  []
-[]
-
 
 [Debug]
   show_var_residual_norms = true
@@ -328,5 +348,19 @@ timestep=${fparse endtime/1000} # s
   [tot_nl]
     type = CumulativeValuePostprocessor
     postprocessor = 'nl'
+  []
+  [l2error]
+    type = ElementL2Difference
+    variable = T
+    other_variable = T_pod
+  []
+  [l2integral]
+    type = ElementL2Norm
+    variable = T
+  []
+  [relativel2error]
+    type = ParsedPostprocessor
+    expression = 'l2error / l2integral'
+    pp_names = 'l2error l2integral'
   []
 []
