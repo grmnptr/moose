@@ -24,10 +24,12 @@ MixedLaserWeld316LStainlessSteel::validParams()
   params.addParam<Real>("Tl", 1708, "The liquidus temperature");
   params.addParam<Real>("Ts", 1628, "The solidus temperature");
 
-  params.addParam<Real>("c_k0_s", 10.5599, "k0 coefficient for the solid in k0+k1*T");
-  params.addParam<Real>("c_k1_s", 1.2866E-2, "k1 coefficient for the solid in k0+k1*T");
-  params.addParam<Real>("c_k0_l", 5.07156, "k0 coefficient for the liquid in k0+k1*T");
-  params.addParam<Real>("c_k1_l", 1.269E-2, "k1 coefficien for the liquid in k0+k1*Tt");
+  params.addParam<Real>("c_k0_s", 6.38, "k0 coefficient for the solid in k0+k1*T");
+  params.addParam<Real>("c_k1_s", 1.9E-2, "k1 coefficient for the solid in k0+k1*T");
+  params.addParam<Real>("c_k2_s", -2.45E-6, "k1 coefficient for the solid in k0+k1*T");
+  params.addParam<Real>("c_k0_l", 2.27, "k0 coefficient for the liquid in k0+k1*T");
+  params.addParam<Real>("c_k1_l", 1.76E-2, "k1 coefficien for the liquid in k0+k1*Tt");
+  params.addParam<Real>("c_k2_l", -1.39E-6, "k1 coefficient for the solid in k0+k1*T");
 
   params.addParam<Real>("c_cp0_s", 458.98, "cp0 coefficient for the solid in cp0+cp1*T");
   params.addParam<Real>("c_cp1_s", 0.1328, "cp1 coefficient for the solid in cp0+cp1*T");
@@ -61,8 +63,10 @@ MixedLaserWeld316LStainlessSteel::MixedLaserWeld316LStainlessSteel(
     _c_mu1(getParam<Real>("c_mu1")),
     _c_k0_s(getParam<Real>("c_k0_s")),
     _c_k1_s(getParam<Real>("c_k1_s")),
+    _c_k2_s(getParam<Real>("c_k2_s")),
     _c_k0_l(getParam<Real>("c_k0_l")),
     _c_k1_l(getParam<Real>("c_k1_l")),
+    _c_k2_l(getParam<Real>("c_k2_l")),
     _c_cp0_s(getParam<Real>("c_cp0_s")),
     _c_cp1_s(getParam<Real>("c_cp1_s")),
     _c_cp0_l(getParam<Real>("c_cp0_l")),
@@ -92,7 +96,8 @@ MixedLaserWeld316LStainlessSteel::computeQpProperties()
   if (_temperature[_qp] < _Ts)
   {
     _mu[_qp] = 1e11 * 1e-3 * std::exp(_c_mu0 / That - _c_mu1);
-    _k[_qp] = _c_k0_s + _c_k1_s * _temperature[_qp];
+    _k[_qp] =
+        _c_k0_s + _c_k1_s * _temperature[_qp] + _c_k2_s * _temperature[_qp] * _temperature[_qp];
     _grad_k[_qp] = _c_k1_s * _grad_temperature[_qp];
     _cp[_qp] = _c_cp0_s + _c_cp1_s * _temperature[_qp];
     _rho[_qp] = _c_rho0_s + _c_rho1_s * _temperature[_qp] +
@@ -101,7 +106,8 @@ MixedLaserWeld316LStainlessSteel::computeQpProperties()
   else
   {
     const auto mu_l = std::max(0.030, 1e-3 * std::exp(_c_mu0 / That - _c_mu1));
-    const auto k_l = _c_k0_l + _c_k1_l * _temperature[_qp];
+    const auto k_l =
+        _c_k0_l + _c_k1_l * _temperature[_qp] + _c_k2_l * _temperature[_qp] * _temperature[_qp];
     const auto grad_k_l = _c_k1_l * _grad_temperature[_qp];
     const auto cp_l = _c_cp0_l;
     const auto rho_l = _c_rho0_l + _c_rho1_l * _temperature[_qp] +
@@ -112,7 +118,8 @@ MixedLaserWeld316LStainlessSteel::computeQpProperties()
       const auto liquid_fraction = (_temperature[_qp] - _Ts) / (_Tl - _Ts);
 
       const auto mu_s = 1e11 * 1e-3 * std::exp(_c_mu0 / That - _c_mu1);
-      const auto k_s = _c_k0_s + _c_k1_s * _temperature[_qp];
+      const auto k_s =
+          _c_k0_s + _c_k1_s * _temperature[_qp] + _c_k2_s * _temperature[_qp] * _temperature[_qp];
       const auto grad_k_s = _c_k1_s * _grad_temperature[_qp];
       const auto cp_s = _c_cp0_s + _c_cp1_s * _temperature[_qp];
       const auto rho_s = _c_rho0_s + _c_rho1_s * _temperature[_qp] +

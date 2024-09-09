@@ -21,8 +21,8 @@ MixedLaserWeld316LStainlessSteelBoundary::validParams()
   params.addParam<Real>("M", 56E-3, "Molar mass for the recoil pressure");
   params.addParam<Real>("T_v", 3080, "The vaporization temperature for recoil pressure");
   params.addParam<Real>("R", 8.314, "The gas constant for recoil pressure");
-  params.addParam<Real>("c_gamma0", 1.943, "Constant term in the surface tension");
-  params.addParam<Real>("c_gamma1", 4.3e-4, "Linear term multiplier in the surface tension");
+  params.addParam<Real>("c_gamma0", 1.593, "Constant term in the surface tension");
+  params.addParam<Real>("c_gamma1", 1.9e-4, "Linear term multiplier in the surface tension");
   params.addParam<Real>("Tl", 1708, "The liquidus temperature");
   params.addRequiredCoupledVar("temperature", "The temperature in K");
   params.addParam<MaterialPropertyName>("rc_pressure_name", "rc_pressure", "The recoil pressure");

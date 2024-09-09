@@ -49,8 +49,10 @@ protected:
    */
   const Real _c_k0_s;
   const Real _c_k1_s;
+  const Real _c_k2_s;
   const Real _c_k0_l;
   const Real _c_k1_l;
+  const Real _c_k2_l;
 
   /**
    * Specific heat is a linear function of temperature. the original reference gave it

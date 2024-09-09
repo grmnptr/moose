@@ -65,6 +65,13 @@
     variables = "T"
     serialize_on_root = true
   []
+  [data]
+    type = SamplerReporterTransfer
+    from_multi_app = worker
+    sampler = sample
+    from_reporter = 'tot_nl/value'
+    stochastic_reporter = 'matrix'
+  []
 []
 
 [Reporters]

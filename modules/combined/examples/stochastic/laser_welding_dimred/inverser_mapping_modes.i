@@ -19,7 +19,25 @@ ymin=${fparse -thickness}
 [Variables]
   [T]
   []
-  [T_pod]
+  [T_pod1]
+  []
+  [T_pod2]
+  []
+  [T_pod3]
+  []
+  [T_pod4]
+  []
+  [T_pod5]
+  []
+  [T_pod6]
+  []
+  [T_pod7]
+  []
+  [T_pod8]
+  []
+  [T_pod9]
+  []
+  [T_pod10]
   []
 []
 
@@ -35,10 +53,82 @@ ymin=${fparse -thickness}
 []
 
 [UserObjects]
-  [im_sol]
+  [mode1]
     type = InverseMapping
     mapping = pod_mapping_sol
-    variable_to_fill = "T_pod"
+    variable_to_fill = "T_pod1"
+    variable_to_reconstruct = "T"
+    parameters = '1 0 0 0 0 0 0 0 0 0'
+    execute_on = TIMESTEP_END
+  []
+  [mode2]
+    type = InverseMapping
+    mapping = pod_mapping_sol
+    variable_to_fill = "T_pod2"
+    variable_to_reconstruct = "T"
+    parameters = '0 1 0 0 0 0 0 0 0 0'
+    execute_on = TIMESTEP_END
+  []
+  [mode3]
+    type = InverseMapping
+    mapping = pod_mapping_sol
+    variable_to_fill = "T_pod3"
+    variable_to_reconstruct = "T"
+    parameters = '0 0 1 0 0 0 0 0 0 0'
+    execute_on = TIMESTEP_END
+  []
+  [mode4]
+    type = InverseMapping
+    mapping = pod_mapping_sol
+    variable_to_fill = "T_pod4"
+    variable_to_reconstruct = "T"
+    parameters = '0 0 0 1 0 0 0 0 0 0'
+    execute_on = TIMESTEP_END
+  []
+  [mode5]
+    type = InverseMapping
+    mapping = pod_mapping_sol
+    variable_to_fill = "T_pod5"
+    variable_to_reconstruct = "T"
+    parameters = '0 0 0 0 1 0 0 0 0 0'
+    execute_on = TIMESTEP_END
+  []
+  [mode6]
+    type = InverseMapping
+    mapping = pod_mapping_sol
+    variable_to_fill = "T_pod6"
+    variable_to_reconstruct = "T"
+    parameters = '0 0 0 0 0 1 0 0 0 0'
+    execute_on = TIMESTEP_END
+  []
+  [mode7]
+    type = InverseMapping
+    mapping = pod_mapping_sol
+    variable_to_fill = "T_pod7"
+    variable_to_reconstruct = "T"
+    parameters = '0 0 0 0 0 0 1 0 0 0'
+    execute_on = TIMESTEP_END
+  []
+  [mode8]
+    type = InverseMapping
+    mapping = pod_mapping_sol
+    variable_to_fill = "T_pod8"
+    variable_to_reconstruct = "T"
+    parameters = '0 0 0 0 0 0 0 1 0 0'
+    execute_on = TIMESTEP_END
+  []
+  [mode9]
+    type = InverseMapping
+    mapping = pod_mapping_sol
+    variable_to_fill = "T_pod8"
+    variable_to_reconstruct = "T"
+    parameters = '0 0 0 0 0 0 0 0 1 0'
+    execute_on = TIMESTEP_END
+  []
+  [mode10]
+    type = InverseMapping
+    mapping = pod_mapping_sol
+    variable_to_fill = "T_pod8"
     variable_to_reconstruct = "T"
     parameters = '0 0 0 0 0 0 0 0 0 1'
     execute_on = TIMESTEP_END

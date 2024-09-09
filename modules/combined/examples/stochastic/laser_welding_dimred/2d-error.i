@@ -49,6 +49,8 @@ timestep=${fparse endtime/1000} # s
   []
   [T_pod]
   []
+  [T_diff]
+  []
 []
 
 [AuxKernels]
@@ -63,6 +65,12 @@ timestep=${fparse endtime/1000} # s
     variable = vel_y_aux
     vector_variable = vel
     component = y
+  []
+  [T_diff]
+    type = ParsedAux
+    variable = T_diff
+    coupled_variables = 'T T_pod'
+    expression = 'abs(T-T_pod)'
   []
 []
 

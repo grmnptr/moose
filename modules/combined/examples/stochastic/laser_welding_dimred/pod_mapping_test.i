@@ -10,7 +10,7 @@
   [power_dist]
     type = Uniform
     lower_bound = 70
-    upper_bound = 80
+    upper_bound = 83
   []
 []
 
@@ -18,7 +18,7 @@
   [sample]
     type = MonteCarlo
     seed = 13
-    num_rows = 16
+    num_rows = 1
     distributions = 'R_dist power_dist'
     min_procs_per_row = 56
     max_procs_per_row = 56
@@ -29,7 +29,7 @@
 [MultiApps]
   [worker]
     type = SamplerFullSolveMultiApp
-    input_files = 2d.i
+    input_files = 2d-error.i
     sampler = sample
     mode = batch-reset
     min_procs_per_app = 56
@@ -47,14 +47,12 @@
 []
 
 [Transfers]
-  [solution_transfer_sol]
-    type = SerializedSolutionTransfer
-    parallel_storage = parallel_storage_sol
+  [data]
+    type = SamplerReporterTransfer
     from_multi_app = worker
     sampler = sample
-    solution_container = solution_storage_sol
-    variables = "T"
-    serialize_on_root = true
+    from_reporter = 'relativel2error/value'
+    stochastic_reporter = 'matrix'
   []
 []
 
@@ -71,6 +69,5 @@
     type = JSON
     execute_on = FINAL
     execute_system_information_on = NONE
-    vectorpostprocessors_as_reporters = true
   []
 []
