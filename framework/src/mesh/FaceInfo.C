@@ -29,6 +29,15 @@ FaceInfo::FaceInfo(const ElemInfo * elem_info, unsigned int side, const dof_id_t
   unsigned int dim = _elem_info->elem()->dim();
   const std::unique_ptr<const Elem> face = _elem_info->elem()->build_side_ptr(_elem_side_id);
   std::unique_ptr<FEBase> fe(FEBase::build(dim, FEType(_elem_info->elem()->default_order())));
+
+  if (_elem_info->elem()->default_order() > 1)
+    mooseError("The face at ",
+               face->vertex_average(),
+               " is an element of order ",
+               _elem_info->elem()->default_order(),
+               ", which cannot be used with the finite volume method in "
+               "MOOSE without errors in the computation of face normals and face areas!");
+
   QGauss qface(dim - 1, CONSTANT);
   fe->attach_quadrature_rule(&qface);
   const std::vector<Point> & normals = fe->get_normals();
