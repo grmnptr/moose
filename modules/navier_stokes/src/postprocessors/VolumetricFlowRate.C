@@ -149,6 +149,7 @@ VolumetricFlowRate::computeFaceInfoIntegral(const FaceInfo * fi)
                                     correct_skewness,
                                     elem}),
                     state));
+
   return fi->normal() * adv_quant_face * vel;
 }
 

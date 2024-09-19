@@ -65,7 +65,6 @@ FVFluxBC::computeResidual(const FaceInfo & fi)
     mooseError("A FVFluxBC is being triggered on a face which does not connect to a block ",
                "with the relevant finite volume variable. Its centroid: ",
                fi.faceCentroid());
-
   auto r = MetaPhysicL::raw_value(fi.faceArea() * fi.faceCoord() * computeQpResidual());
 
   // This could be an "internal" boundary - one created by variable block

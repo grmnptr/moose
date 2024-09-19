@@ -632,7 +632,7 @@ Assembly::createQRules(QuadratureType type,
     q.vol->allow_rules_with_negative_weights = allow_negative_qweights;
     q.face = QBase::build(type, dim - 1, face_order);
     q.face->allow_rules_with_negative_weights = allow_negative_qweights;
-    q.fv_face = QBase::build(QMONOMIAL, dim - 1, CONSTANT);
+    q.fv_face = QBase::build(type, dim - 1, face_order);
     q.fv_face->allow_rules_with_negative_weights = allow_negative_qweights;
     q.neighbor = std::make_unique<ArbitraryQuadrature>(dim - 1, face_order);
     q.neighbor->allow_rules_with_negative_weights = allow_negative_qweights;

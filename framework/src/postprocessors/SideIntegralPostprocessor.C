@@ -62,8 +62,10 @@ SideIntegralPostprocessor::computeIntegral()
 {
   Real sum = 0;
   if (_qp_integration)
+  {
     for (_qp = 0; _qp < _qrule->n_points(); _qp++)
       sum += _JxW[_qp] * _coord[_qp] * computeQpIntegral();
+  }
   else
   {
     // Finite volume functors integration is over FaceInfo, not quadrature points
