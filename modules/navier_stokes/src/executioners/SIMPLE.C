@@ -313,7 +313,7 @@ SIMPLE::execute()
     ns_abs_tols.push_back(_pressure_absolute_tolerance);
 
     // Loop until converged or hit the maximum allowed iteration number
-    while (iteration_counter < _num_iterations && !converged(ns_residuals, ns_abs_tols))
+    while (iteration_counter < _num_iterations && !NS::FV::converged(ns_residuals, ns_abs_tols))
     {
       iteration_counter++;
 
