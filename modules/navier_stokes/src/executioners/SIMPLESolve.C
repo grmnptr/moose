@@ -36,6 +36,15 @@ SIMPLESolve::SIMPLESolve(Executioner & ex)
     _momentum_system_numbers.push_back(_problem.linearSysNum(_momentum_system_names[system_i]));
     _momentum_systems.push_back(&_problem.getLinearSystem(_momentum_system_numbers[system_i]));
   }
+  // and for the turbulence surrogate equations
+  if (_has_turbulence_systems)
+    for (auto system_i : index_range(_turbulence_system_names))
+    {
+      _turbulence_system_numbers.push_back(
+          _problem.linearSysNum(_turbulence_system_names[system_i]));
+      _turbulence_systems.push_back(
+          &_problem.getLinearSystem(_turbulence_system_numbers[system_i]));
+    }
   // and for the passive scalar equations
   if (_has_passive_scalar_systems)
     for (auto system_i : index_range(_passive_scalar_system_names))
@@ -280,12 +289,17 @@ SIMPLESolve::solve()
   unsigned int iteration_counter = 0;
 
   // Assign residuals to general residual vector
-  const unsigned int no_systems = _momentum_systems.size() + 1 + _has_energy_system;
+  unsigned int no_systems = _momentum_systems.size() + 1 + _has_energy_system;
+  if (_has_turbulence_systems)
+    no_systems += _turbulence_systems.size();
   std::vector<std::pair<unsigned int, Real>> ns_residuals(no_systems, std::make_pair(0, 1.0));
   std::vector<Real> ns_abs_tols(_momentum_systems.size(), _momentum_absolute_tolerance);
   ns_abs_tols.push_back(_pressure_absolute_tolerance);
   if (_has_energy_system)
     ns_abs_tols.push_back(_energy_absolute_tolerance);
+  if (_has_turbulence_systems)
+    for (const auto turbulence_tol : _turbulence_absolute_tolerance)
+      ns_abs_tols.push_back(turbulence_tol);
 
   bool converged = false;
   // Loop until converged or hit the maximum allowed iteration number
@@ -352,6 +366,23 @@ SIMPLESolve::solve()
                                                                        _energy_linear_control,
                                                                        _energy_l_abs_tol);
     }
+    
+    // If we have an turbulence equations, solve it here.
+    // The turbulent viscosity depends on the value of the turbulence surrogate variables
+    if (_has_turbulence_systems)
+    {
+      // We set the preconditioner/controllable parameters through petsc options. Linear
+      // tolerances will be overridden within the solver.
+      Moose::PetscSupport::petscSetOptions(_turbulence_petsc_options, solver_params);
+      for (const auto i : index_range(_turbulence_system_names))
+        ns_residuals[momentum_residual.size() + _has_energy_system + i] = 
+                                                     solveAdvectedSystem(_turbulence_system_numbers[i],
+                                                                         *_turbulence_systems[i],
+                                                                         _turbulence_equation_relaxation[i],
+                                                                         _turbulence_linear_control,
+                                                                         _turbulence_l_abs_tol);
+    }
+
     _problem.execute(EXEC_NONLINEAR);
 
     // Printing residuals
@@ -372,6 +403,13 @@ SIMPLESolve::solve()
       _console << " Energy equation: " << COLOR_GREEN
                << ns_residuals[momentum_residual.size() + 1].second << COLOR_DEFAULT
                << " Linear its: " << ns_residuals[momentum_residual.size() + 1].first << std::endl;
+
+    if (_has_turbulence_systems)
+        _console << " Turbulence scalar equations:\n";
+        for (const auto i : index_range(_turbulence_system_names))
+          _console << COLOR_MAGENTA << "    " << _turbulence_system_names[i] << ": "
+                   << ns_residuals[momentum_residual.size() + _has_energy_system + i].second << COLOR_DEFAULT
+                   << " Linear its: " << ns_residuals[momentum_residual.size() + _has_energy_system + i].first << std::endl;
 
     converged = NS::FV::converged(ns_residuals, ns_abs_tols);
   }
