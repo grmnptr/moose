@@ -1,0 +1,7 @@
+# Temperature profiles predicted by Som's MOGP
+AXIS T
+80e-6 160e-6 240e-6
+DATA
+0
+60e-6
+120e-6

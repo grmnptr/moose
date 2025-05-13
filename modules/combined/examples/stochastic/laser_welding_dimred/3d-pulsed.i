@@ -1,5 +1,5 @@
 # Process parameters
-scanning_speed=0.5 # m/s
+scanning_speed=1.0 # m/s
 power=25 # W (this is the effective power so multiplied by eta)
 R=70e-6 # m (this is the effective radius)
 
@@ -61,6 +61,14 @@ timestep=${fparse endtime/40} # s
   []
 []
 
+[Functions]
+  [fn]
+    type = PiecewiseMulticonstant
+    direction = 'right'
+    data_file = pulsed-source.txt
+  []
+[]
+
 [BCs]
   [T_cold]
     type = DirichletBC
@@ -82,7 +90,7 @@ timestep=${fparse endtime/40} # s
     boundary = 'front'
     P0 = ${power}
     R = ${R}
-    x_beam_coord = '${scanning_speed}*t'
+    x_beam_coord = 'fn'
     y_beam_coord = '0'
     z_beam_coord = '0'
   []
@@ -107,7 +115,7 @@ timestep=${fparse endtime/40} # s
   petsc_options_value = 'hypre    boomeramg       NONZERO'
   petsc_options = '-snes_converged_reason -ksp_converged_reason -options_left'
   solve_type = 'NEWTON'
-  line_search = 'none'
+  # line_search = 'none'
   nl_max_its = 5
   l_max_its = 100
   [TimeStepper]
