@@ -16,7 +16,7 @@
   []
 []
 
-!include physics_objects.i
+!include physics_objects_pulsed.i
 
 [Executioner]
   type = Transient
@@ -40,15 +40,16 @@
   []
 []
 
-# [Reporters]
-#   [solution_storage]
-#     type = SolutionContainer
-#     execute_on = 'FINAL'
-#   []
-# []
-
 [Outputs]
   exodus = true
+  csv = true
+[]
+
+[Postprocessors]
+  [const]
+    type = ConstantPostprocessor
+    value = 0
+  []
 []
 
 [Debug]

@@ -6,8 +6,8 @@
     xmax = ${xmax}
     ymin = ${fparse ymin}
     ymax = 0
-    nx = 161
-    ny = 50
+    nx = 300
+    ny = 80
   []
   displacements = 'disp_x disp_y'
 []
