@@ -1,6 +1,6 @@
 # Process parameters
 scanning_speed=1.0 # m/s
-power=25 # W (this is the effective power so multiplied by eta)
+power=30 # W (this is the effective power so multiplied by eta)
 R=70e-6 # m (this is the effective radius)
 
 # Geometric parameters
@@ -13,7 +13,7 @@ surfacetemp=300 # K (temperature at the other side of the plate)
 backtemp=300
 
 # Time stepping parameters
-endtime=240e-6 # s
+endtime=200e-6 # s
 timestep=${fparse endtime/40} # s
 
 [Mesh]
