@@ -12,12 +12,16 @@
 #include "LinearFVFluxKernel.h"
 #include "RhieChowMassFlux.h"
 #include "LinearFVAdvectionDiffusionBC.h"
+#include "FVAdvectedInterpolationMethod.h"
+#include "FVInterpolationMethodInterface.h"
+
+class LinearFVGradientReader;
 
 /**
  * An advection kernel that implements the advection term for the enthalpy in the
  * energy equation.
  */
-class LinearFVEnergyAdvection : public LinearFVFluxKernel
+class LinearFVEnergyAdvection : public LinearFVFluxKernel, public FVInterpolationMethodInterface
 {
 public:
   static InputParameters validParams();
@@ -59,6 +63,21 @@ private:
   /// Container for the current advected interpolation coefficients on the face to make sure
   /// we don't compute it multiple times for different terms.
   std::pair<Real, Real> _advected_interp_coeffs;
+
+  /// Optional FVInterpolationMethod object for the advected quantity (e.g. a limited
+  /// second-order scheme). When null, the legacy advected_interp_method enum is used.
+  const FVAdvectedInterpolationMethod * const _adv_interp_method_object;
+
+  /// Gradient field used by advected interpolation methods that require gradients
+  const LinearFVGradientReader * const _gradient_field;
+
+  /// Right hand side part of the advected face value for the current face (deferred
+  /// correction methods); zero for weight-based methods and the legacy enum
+  Real _advected_rhs_face_value;
+
+  /// Reusable gradient storage used when the advected interpolation requires gradients
+  VectorValue<Real> _elem_grad_storage;
+  VectorValue<Real> _neighbor_grad_storage;
 
   /// Container for the mass flux on the face which will be reused in the advection term's
   /// matrix and right hand side contribution
